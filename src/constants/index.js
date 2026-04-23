@@ -123,17 +123,6 @@ const technologies = [
 
 const experiences = [
   {
-    title: "Software Engineer",
-    company_name: "TeknTrash Robotics",
-    icon: tekntrash,
-    iconBg: "#383E56",
-    date: "Mar 2025 – Present",
-    points: [
-      "Developing Unity3D app to control robotic hand via Meta Quest input.",
-      "Enabling real-time interaction and testing of robotic response.",
-    ],
-  },//TODO
-  {
     title: "Sales Colleague ",
     company_name: "Currys ",
     icon: currys,
@@ -144,6 +133,18 @@ const experiences = [
       "Improved Customer Handling & Problem-Solving, Managing several customer interactions helped me develop patience, empathy, and quick problem-solving skills, ensuring positive experiences even in challenging situations.  ",
     ],
   },
+  {
+    title: "Software Engineer",
+    company_name: "TeknTrash Robotics",
+    icon: tekntrash,
+    iconBg: "#383E56",
+    date: "Mar 2025 – Oct 2025",
+    points: [
+      "Developing Unity3D app to control robotic hand via Meta Quest input.",
+      "Enabling real-time interaction and testing of robotic response.",
+    ],
+  },//TODO
+  
   {
     title: "Software Engineer",
     company_name: "Eccentric",
