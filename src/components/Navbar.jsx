@@ -39,9 +39,7 @@ export default function Navbar() {
           scrolled ? "border-b border-white/[0.05]" : "border-b border-transparent"
         }`}
         style={{
-          background: scrolled ? "rgba(0, 0, 0, 0.75)" : "transparent",
-          backdropFilter: scrolled ? "blur(30px)" : "none",
-          WebkitBackdropFilter: scrolled ? "blur(30px)" : "none",
+          background: scrolled ? "rgba(0, 0, 0, 0.97)" : "transparent",
         }}
       >
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
@@ -105,9 +103,7 @@ export default function Navbar() {
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-8 md:hidden"
             style={{
-              background: "rgba(0,0,0,0.95)",
-              backdropFilter: "blur(30px)",
-              WebkitBackdropFilter: "blur(30px)",
+              background: "#000",
             }}
           >
             {links.map((l, i) => (

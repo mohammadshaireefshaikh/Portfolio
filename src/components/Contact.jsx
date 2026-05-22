@@ -36,7 +36,7 @@ export default function Contact() {
   return (
     <section id="contact" className="py-28 px-6 border-t border-white/[0.06]">
       <div className="max-w-3xl mx-auto">
-        <AnimatedSection className="mb-12 text-center">
+        <AnimatedSection className="mb-16 text-center">
           <AnimatedItem>
             <p className="text-xs font-medium tracking-[0.2em] uppercase text-[#0071e3] mb-4">
               Contact

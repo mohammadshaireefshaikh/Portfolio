@@ -3,12 +3,11 @@ import AnimatedSection, { AnimatedItem } from "./AnimatedSection";
 import { experience } from "../data/portfolio";
 
 const cardVariants = {
-  hidden: { opacity: 0, x: -30, filter: "blur(6px)" },
+  hidden: { opacity: 0, y: 16 },
   visible: {
     opacity: 1,
-    x: 0,
-    filter: "blur(0px)",
-    transition: { duration: 0.75, ease: [0.22, 1, 0.36, 1] },
+    y: 0,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
@@ -19,28 +18,18 @@ function ExperienceCard({ role, company, period, location, description, highligh
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-50px" }}
-      transition={{ delay: index * 0.08 }}
+      transition={{ delay: index * 0.06 }}
       className="relative flex gap-6"
     >
       <div className="flex flex-col items-center shrink-0 w-6">
-        <motion.div
+        <div
           className="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0"
-          style={{
-            background: "#0071e3",
-            boxShadow: "0 0 12px rgba(0,113,227,0.6)",
-          }}
-          whileInView={{ scale: [0, 1.3, 1] }}
-          transition={{ duration: 0.5, delay: index * 0.08 + 0.3 }}
-          viewport={{ once: true }}
+          style={{ background: "#0071e3" }}
         />
         {index < experience.length - 1 && (
-          <motion.div
+          <div
             className="flex-1 w-px mt-2"
             style={{ background: "rgba(255,255,255,0.05)" }}
-            initial={{ scaleY: 0, originY: 0 }}
-            whileInView={{ scaleY: 1 }}
-            transition={{ duration: 0.8, delay: index * 0.08 + 0.5, ease: "easeOut" }}
-            viewport={{ once: true }}
           />
         )}
       </div>
@@ -80,7 +69,7 @@ function ExperienceCard({ role, company, period, location, description, highligh
             </span>
             {badge && (
               <span
-                className="text-[10px] font-medium px-2 py-0.5 rounded-full shimmer"
+                className="text-[10px] font-medium px-2 py-0.5 rounded-full"
                 style={{
                   background: "rgba(0,113,227,0.12)",
                   border: "1px solid rgba(0,113,227,0.3)",
@@ -96,13 +85,9 @@ function ExperienceCard({ role, company, period, location, description, highligh
         <p className="text-sm text-[#6e6e73] leading-relaxed mb-5">{description}</p>
 
         <ul className="flex flex-col gap-2">
-          {highlights.map((h, i) => (
-            <motion.li
+          {highlights.map((h) => (
+            <li
               key={h}
-              initial={{ opacity: 0, x: -8 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.08 + 0.4 + i * 0.06, duration: 0.4 }}
-              viewport={{ once: true }}
               className="flex items-start gap-2.5 text-xs text-[#555]"
             >
               <span
@@ -110,7 +95,7 @@ function ExperienceCard({ role, company, period, location, description, highligh
                 style={{ background: "rgba(0,113,227,0.7)" }}
               />
               {h}
-            </motion.li>
+            </li>
           ))}
         </ul>
       </div>

@@ -15,7 +15,7 @@ export default function About() {
           </AnimatedItem>
           <AnimatedItem>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-white tracking-tight leading-tight max-w-2xl mb-6">
-              Engineer who builds across the stack.
+              I build things end to end.
             </h2>
           </AnimatedItem>
           <AnimatedItem>
@@ -41,7 +41,7 @@ export default function About() {
                     background: "rgba(255,255,255,0.03)",
                     border: "1px solid rgba(255,255,255,0.07)",
                   }}
-                  whileHover={{ borderColor: "rgba(0,113,227,0.25)", scale: 1.02 }}
+                  whileHover={{ borderColor: "rgba(0,113,227,0.25)" }}
                   transition={{ duration: 0.2 }}
                 >
                   <p className="text-xl font-bold text-white tabular-nums tracking-tight mb-1">
@@ -64,18 +64,14 @@ export default function About() {
             {awards.map((award, i) => (
               <AnimatedItem key={award.title}>
                 <motion.div
-                  className="flex items-start gap-5 p-5 rounded-2xl shimmer"
+                  className="flex items-start gap-5 p-5 rounded-2xl"
                   style={{
-                    background:
-                      i === 0
-                        ? "linear-gradient(135deg, rgba(0,113,227,0.08) 0%, rgba(255,255,255,0.02) 100%)"
-                        : "rgba(255,255,255,0.02)",
+                    background: i === 0 ? "#111111" : "rgba(255,255,255,0.02)",
                     border:
                       i === 0
                         ? "1px solid rgba(0,113,227,0.2)"
                         : "1px solid rgba(255,255,255,0.06)",
                   }}
-                  whileHover={{ scale: 1.01 }}
                   transition={{ duration: 0.2 }}
                 >
                   <div
