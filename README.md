@@ -1,75 +1,182 @@
-# Mohammad Shaikh — Portfolio v2
+Mohammad Shaikh — Portfolio v2
+Apple-inspired developer portfolio built with React, Vite, Tailwind CSS v4, and Framer Motion.
 
-Apple-inspired developer portfolio. React + Tailwind CSS v4 + Framer Motion.
+Live Portfolio
 
-## Stack
+Overview
+This repository contains the source code for Mohammad Shaikh’s portfolio website — a modern, motion-rich personal site designed to showcase projects, experience, skills, awards, and contact information.
 
-- React 19 (Vite)
-- Tailwind CSS v4 (`@tailwindcss/vite`)
-- Framer Motion (parallax, stagger, 3D tilt, blur reveal)
-- Lucide React + inline SVG icons
+The portfolio blends a clean visual system with smooth interactions, including parallax effects, staggered reveals, 3D tilt cards, floating stat panels, and glassmorphism-inspired UI details.
 
-## Run
+Live Demo
+Visit the deployed portfolio here:
 
-```bash
+https://mohammadshaireefshaikh.github.io/Portfolio/
+
+Tech Stack
+React 19 — component-driven UI
+
+Vite — fast development server and optimized production builds
+
+Tailwind CSS v4 — utility-first styling with @tailwindcss/vite
+
+Framer Motion — animation system for reveal effects, parallax, and transitions
+
+Lucide React — clean iconography
+
+Inline SVG — custom brand and social visuals
+
+Highlights
+Apple-inspired visual direction
+
+Smooth motion and scroll-based interactions
+
+Fully responsive layout
+
+Reusable animated sections
+
+Project cards with interactive 3D tilt
+
+Experience timeline with polished transitions
+
+Dedicated sections for awards, skills, and featured work
+
+GitHub Pages deployment
+
+Sections Included
+Hero — intro, title, visual impact, quick stats
+
+About — personal summary, metrics, awards
+
+Skills — grouped technical strengths
+
+Experience — career timeline and company roles
+
+Projects — featured and supporting portfolio work
+
+Contact — contact form and social links
+
+Footer — navigation and copyright
+
+Project Structure
+bash
+.
+├── public/
+├── src/
+│   ├── components/
+│   ├── data/
+│   │   └── portfolio.js
+│   ├── index.css
+│   └── main.jsx
+├── index.html
+├── package.json
+├── vite.config.js
+└── README.md
+Getting Started
+1. Clone the repository
+bash
+git clone https://github.com/mohammadshaireefshaikh/Portfolio.git
+cd Portfolio
+2. Install dependencies
+bash
 npm install
+3. Start the development server
+bash
 npm run dev
-```
+Then open:
 
-Open http://localhost:5173
-
-## Build
-
-```bash
+bash
+http://localhost:5173
+Build for Production
+bash
 npm run build
 npm run preview
-```
+The production-ready output is generated inside the dist/ folder.
 
-## Edit content
+Content Management
+All editable portfolio content lives in:
 
-All portfolio data lives in:
-
-```
+bash
 src/data/portfolio.js
-```
+You can update:
 
-Sections:
-- `personal` — name, title, bio, email, github, linkedin, cvUrl
-- `stats` — 4 numbers shown in hero orb + about section
-- `awards` — Google Cloud win + others
-- `skills` — 4 grouped categories
-- `experience` — TeknTrash, Eccentric, Infogen Labs
-- `projects` — featured + regular
+personal details
 
-## Add CV
+hero stats
 
-Place PDF at `public/cv-mohammad-shaikh.pdf`.
+awards
 
-## Contact form
+skills
 
-`src/components/Contact.jsx` — replace the `setTimeout` in `handleSubmit` with Formspree or EmailJS:
+experience
 
-```js
+projects
+
+links and CV URL
+
+Add a CV
+Place the PDF file in:
+
+bash
+public/cv-mohammad-shaikh.pdf
+Then reference it through the portfolio data config if needed.
+
+Contact Form Setup
+The contact form logic lives in:
+
+bash
+src/components/Contact.jsx
+To connect it to a real backend, replace the demo timeout with a provider such as Formspree or EmailJS.
+
+Example:
+
+js
 await fetch("https://formspree.io/f/YOUR_ID", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(form),
 });
-```
+Main Components
+Component	Purpose
+Navbar.jsx	Sticky blur navigation with mobile menu
+Hero.jsx	Main hero section with animated intro
+OrbVisual.jsx	Orbital visuals and floating stat UI
+GlassButton.jsx	Glassmorphism-inspired CTA button
+About.jsx	Bio, stats, and awards section
+Skills.jsx	Grouped technical skills
+Experience.jsx	Animated timeline of experience
+Projects.jsx	Featured work and interactive project cards
+Contact.jsx	Contact form and social links
+Footer.jsx	Footer navigation and copyright
+Icons.jsx	GitHub and LinkedIn SVG icons
+AnimatedSection.jsx	Shared scroll reveal wrapper
+Deployment
+This portfolio is deployed with GitHub Pages.
 
-## Components
+Live URL:
 
-| File | Purpose |
-|---|---|
-| `Navbar.jsx` | Sticky blur nav, mobile menu |
-| `Hero.jsx` | Split layout, useScroll parallax, stagger reveal |
-| `OrbVisual.jsx` | Orbital rings + floating stat panels |
-| `GlassButton.jsx` | Liquid glass button with shimmer |
-| `About.jsx` | Stats strip + awards |
-| `Skills.jsx` | Grouped tags with stagger |
-| `Experience.jsx` | Animated timeline, real companies |
-| `Projects.jsx` | Featured cards + 3D cursor tilt |
-| `Contact.jsx` | Form + socials |
-| `Footer.jsx` | Links + copyright |
-| `Icons.jsx` | GitHub + LinkedIn SVG |
-| `AnimatedSection.jsx` | Reusable scroll reveal wrapper |
+https://mohammadshaireefshaikh.github.io/Portfolio/
+
+If using Vite for GitHub Pages, make sure the correct base path is configured in vite.config.js.
+
+Design Direction
+The portfolio aims for a premium, product-style feel inspired by Apple-style presentation:
+
+restrained visual hierarchy
+
+motion-led storytelling
+
+strong typography and spacing
+
+minimal but expressive UI
+
+clean presentation of work and experience
+
+Author
+Mohammad Shaikh
+Developer Portfolio
+GitHub: mohammadshaireefshaikh
+Portfolio: mohammadshaireefshaikh.github.io/Portfolio
+
+License
+This project is for personal portfolio use. Reuse of the design, branding, or content should be done only with permission from the author.
