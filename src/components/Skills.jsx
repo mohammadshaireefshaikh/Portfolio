@@ -2,46 +2,30 @@ import { motion } from "framer-motion";
 import AnimatedSection, { AnimatedItem } from "./AnimatedSection";
 import { skills } from "../data/portfolio";
 
-const tagVariants = {
-  hidden: { opacity: 0, scale: 0.88 },
-  visible: (i) => ({
-    opacity: 1,
-    scale: 1,
-    transition: { duration: 0.35, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] },
-  }),
-};
-
 function SkillGroup({ category, items, groupIndex }) {
   return (
     <motion.div
-      initial="hidden"
-      whileInView="visible"
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
-      transition={{ staggerChildren: 0.06, delayChildren: groupIndex * 0.05 }}
+      transition={{ duration: 0.6, delay: groupIndex * 0.08, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-col gap-4"
     >
-      <motion.p
-        variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-        transition={{ duration: 0.5 }}
-        className="text-xs font-medium tracking-[0.18em] uppercase text-[#444]"
-      >
+      <p className="text-xs font-medium tracking-[0.18em] uppercase text-[#444]">
         {category}
-      </motion.p>
+      </p>
       <div className="flex flex-wrap gap-2">
-        {items.map((item, i) => (
-          <motion.span
+        {items.map((item) => (
+          <span
             key={item}
-            custom={i}
-            variants={tagVariants}
-            whileHover={{ scale: 1.06, color: "#f5f5f7" }}
-            className="px-3 py-1.5 text-sm text-[#6e6e73] rounded-xl cursor-default"
+            className="px-3 py-1.5 text-sm text-[#6e6e73] rounded-xl"
             style={{
               background: "rgba(255,255,255,0.04)",
               border: "1px solid rgba(255,255,255,0.07)",
             }}
           >
             {item}
-          </motion.span>
+          </span>
         ))}
       </div>
     </motion.div>
