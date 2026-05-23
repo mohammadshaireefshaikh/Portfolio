@@ -124,7 +124,7 @@ export const projects = [
     github: null,
     demo: "https://play.unity.com/en/games/443610c3-e1f8-4310-90f2-737dad5d74f7/unity-essentials-portfolio-demo",
     demoLabel: "Play Now",
-    featured: false,
+    featured: true,
     year: "2022",
     impact: null,
   },
