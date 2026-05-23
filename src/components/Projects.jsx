@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { ExternalLink } from "lucide-react";
 import { GitHubIcon } from "./Icons";
 import AnimatedSection, { AnimatedItem } from "./AnimatedSection";
@@ -10,9 +11,11 @@ const imgSrc = (path) =>
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 20 },
   visible: (i) => ({
     opacity: 1,
     y: 0,
+    transition: { duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
     transition: { duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
   }),
 };
@@ -56,7 +59,27 @@ function FeaturedProjectCard({ project, index }) {
             <p className="text-base text-[#6e6e73] leading-relaxed max-w-xl mb-6">
               {project.description}
             </p>
+            <h3 className="text-2xl md:text-3xl font-semibold text-white tracking-tight mb-4">
+              {project.title}
+            </h3>
+            <p className="text-base text-[#6e6e73] leading-relaxed max-w-xl mb-6">
+              {project.description}
+            </p>
 
+            <div className="flex flex-wrap gap-2 mb-8">
+              {project.tech.map((t) => (
+                <span
+                  key={t}
+                  className="px-3 py-1 text-xs font-medium text-[#86868b] rounded-lg"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.09)",
+                  }}
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
             <div className="flex flex-wrap gap-2 mb-8">
               {project.tech.map((t) => (
                 <span
@@ -111,6 +134,7 @@ function FeaturedProjectCard({ project, index }) {
           )}
         </div>
       </div>
+      </div>
     </motion.div>
   );
 }
@@ -123,6 +147,7 @@ function SmallProjectCard({ project, index }) {
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-60px" }}
+      className="h-full"
       className="h-full"
     >
       <div
