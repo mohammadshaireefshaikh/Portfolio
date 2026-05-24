@@ -16,8 +16,9 @@ const WELCOME_MESSAGE = {
     "Hi, I'm Mohammad's portfolio assistant. Ask me anything about his work — projects, stack, experience, or how to reach him.",
 };
 
-// In dev: proxied via Vite to localhost:3001. In prod: set VITE_CHAT_API_URL env var.
-const API_URL = import.meta.env.VITE_CHAT_API_URL || "/api/chat";
+// Local dev: leave VITE_API_URL blank → Vite proxy → http://localhost:3001
+// Production: set VITE_API_URL=https://your-project.vercel.app/api/chat at build time
+const API_URL = import.meta.env.VITE_API_URL || "/api/chat";
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
