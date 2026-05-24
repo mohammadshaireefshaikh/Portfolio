@@ -14,13 +14,31 @@ export default function Contact() {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    // Replace with Formspree / EmailJS / your handler
-    await new Promise((r) => setTimeout(r, 800));
-    setSent(true);
+  e.preventDefault();
+  setLoading(true);
+
+  try {
+    const res = await fetch("https://formspree.io/f/YOUR_FORM_ID", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(form),
+    });
+
+    if (res.ok) {
+      setSent(true);
+      setForm({ name: "", email: "", message: "" });
+    } else {
+      alert("Something went wrong. Please try again.");
+    }
+  } catch (error) {
+    alert("Network error. Please try again.");
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
   const inputClass =
     "w-full px-4 py-3.5 text-sm text-white placeholder-[#555] rounded-xl outline-none transition-all duration-200";

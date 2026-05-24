@@ -11,6 +11,16 @@ node_modules
 dist-ssr
 *.local
 
+# Environment / secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# RAG embeddings cache (regenerate with `npm run embed`)
+server/embeddings.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
