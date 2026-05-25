@@ -8,12 +8,19 @@
  *   OPENROUTER_API_KEY  — required
  *   OPENROUTER_MODEL    — optional (defaults to openai/gpt-4o-mini)
  *   SITE_URL            — optional (your production site URL, for OpenRouter analytics)
- *   ALLOWED_ORIGIN      — optional (your GitHub Pages URL, e.g. https://you.github.io)
+ *   ALLOWED_ORIGIN      — comma-separated allowed origins (e.g. https://you.github.io)
  */
 
 import { readFileSync, readdirSync } from 'fs';
 import { join, extname } from 'path';
 import OpenAI from 'openai';
+import {
+  validateMessages,
+  checkRateLimit,
+  getClientIp,
+  setSecurityHeaders,
+  getAllowedOrigin,
+} from './_security.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -66,15 +73,17 @@ Mohammad is a graduate software engineer with real shipping experience across:
 - If a recruiter-style question comes in (availability, roles, location, stack fit), be direct and helpful. Point them to email or LinkedIn at the end.
 - If a technical question comes in (how did he build X, what stack, what trade-offs), engage with substance — name the tools, link the GitHub repo if relevant.`;
 
-function setCorsHeaders(res) {
-  const allowed = process.env.ALLOWED_ORIGIN || '*';
-  res.setHeader('Access-Control-Allow-Origin', allowed);
+function setCorsHeaders(req, res) {
+  const origin = req.headers.origin || '';
+  res.setHeader('Access-Control-Allow-Origin', getAllowedOrigin(origin));
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
 }
 
 export default async function handler(req, res) {
-  setCorsHeaders(res);
+  setCorsHeaders(req, res);
+  setSecurityHeaders(res);
 
   // CORS preflight
   if (req.method === 'OPTIONS') {
@@ -87,14 +96,26 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (!process.env.OPENROUTER_API_KEY) {
-    res.status(500).json({ error: 'Server not configured: OPENROUTER_API_KEY missing' });
+  // Rate limit per IP
+  const ip = getClientIp(req);
+  const rate = checkRateLimit(ip);
+  if (!rate.ok) {
+    res.setHeader('Retry-After', String(rate.retryAfter));
+    res.status(429).json({ error: 'Too many requests. Slow down and try again shortly.' });
     return;
   }
 
+  if (!process.env.OPENROUTER_API_KEY) {
+    console.error('OPENROUTER_API_KEY missing');
+    res.status(500).json({ error: 'Server misconfigured' });
+    return;
+  }
+
+  // Input validation
   const { messages } = req.body || {};
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    res.status(400).json({ error: 'messages array required' });
+  const err = validateMessages(messages);
+  if (err) {
+    res.status(400).json({ error: err });
     return;
   }
 
@@ -131,11 +152,12 @@ export default async function handler(req, res) {
     res.write('data: [DONE]\n\n');
     res.end();
   } catch (err) {
-    console.error('Chat error:', err?.message || err);
+    // Log full error server-side, return generic message to client (no internal leakage)
+    console.error('Chat error:', err);
     if (!res.headersSent) {
-      res.status(500).json({ error: err?.message || 'Internal server error' });
+      res.status(502).json({ error: 'Upstream model error. Please try again.' });
     } else {
-      res.write(`data: ${JSON.stringify({ error: err?.message || 'Stream error' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ error: 'Stream interrupted' })}\n\n`);
       res.end();
     }
   }

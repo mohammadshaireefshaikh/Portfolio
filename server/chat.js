@@ -3,11 +3,15 @@ import { fileURLToPath } from 'url';
 import { dirname, join, extname } from 'path';
 import OpenAI from 'openai';
 import 'dotenv/config';
+import {
+  validateMessages,
+  checkRateLimit,
+  getClientIp,
+} from '../api/_security.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const knowledgeDir = join(__dirname, 'knowledge');
 
-// OpenRouter is OpenAI-API-compatible — just change baseURL + key.
 const openai = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
   baseURL: 'https://openrouter.ai/api/v1',
@@ -19,7 +23,6 @@ const openai = new OpenAI({
 
 const MODEL = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
 
-// Load all .md knowledge files once into a single context block.
 let KNOWLEDGE_CACHE = null;
 function loadKnowledge() {
   if (KNOWLEDGE_CACHE) return KNOWLEDGE_CACHE;
@@ -59,15 +62,24 @@ Mohammad is a graduate software engineer with real shipping experience across:
 - If a technical question comes in (how did he build X, what stack, what trade-offs), engage with substance — name the tools, link the GitHub repo if relevant.`;
 
 export async function chatHandler(req, res) {
-  const { messages } = req.body;
-
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return res.status(400).json({ error: 'messages array required' });
+  // Rate limit per IP
+  const ip = getClientIp(req);
+  const rate = checkRateLimit(ip);
+  if (!rate.ok) {
+    res.setHeader('Retry-After', String(rate.retryAfter));
+    return res.status(429).json({ error: 'Too many requests. Slow down and try again shortly.' });
   }
 
   if (!process.env.OPENROUTER_API_KEY) {
     console.error('OPENROUTER_API_KEY missing');
-    return res.status(500).json({ error: 'Server not configured: OPENROUTER_API_KEY missing' });
+    return res.status(500).json({ error: 'Server misconfigured' });
+  }
+
+  // Input validation
+  const { messages } = req.body || {};
+  const validationErr = validateMessages(messages);
+  if (validationErr) {
+    return res.status(400).json({ error: validationErr });
   }
 
   try {
@@ -81,7 +93,6 @@ export async function chatHandler(req, res) {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    // Keep last 8 turns max
     const chatMessages = [
       { role: 'system', content: systemWithContext },
       ...messages.slice(-8),
@@ -105,14 +116,12 @@ export async function chatHandler(req, res) {
     res.write('data: [DONE]\n\n');
     res.end();
   } catch (err) {
-    console.error('Chat error:', err?.message || err);
-    if (err?.response?.data) {
-      console.error('OpenRouter response:', JSON.stringify(err.response.data));
-    }
+    // Log full error server-side, return generic to client
+    console.error('Chat error:', err);
     if (!res.headersSent) {
-      res.status(500).json({ error: err?.message || 'Internal server error' });
+      res.status(502).json({ error: 'Upstream model error. Please try again.' });
     } else {
-      res.write(`data: ${JSON.stringify({ error: err?.message || 'Stream error' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ error: 'Stream interrupted' })}\n\n`);
       res.end();
     }
   }

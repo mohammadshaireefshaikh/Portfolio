@@ -65,7 +65,17 @@ export default function ChatWidget() {
           signal: controller.signal,
         });
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          // Try to read structured error from JSON body
+          let serverMsg = `HTTP ${res.status}`;
+          try {
+            const body = await res.json();
+            if (body?.error) serverMsg = body.error;
+          } catch {
+            // Non-JSON body — keep status code
+          }
+          throw new Error(serverMsg);
+        }
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -116,13 +126,15 @@ export default function ChatWidget() {
         });
       } catch (err) {
         if (err.name === "AbortError") return;
+        const msg = err?.message || "";
+        const friendly = /too many/i.test(msg)
+          ? "You're sending messages too fast. Wait a moment, then try again."
+          : /too long|max .* chars/i.test(msg)
+          ? "That message is too long. Try a shorter one."
+          : "Something went wrong connecting to the server. Try again or email shaikh.mohammad1099@gmail.com";
         setMessages((prev) => {
           const updated = [...prev];
-          updated[updated.length - 1] = {
-            role: "assistant",
-            content:
-              "Something went wrong connecting to the server. Try again or email shaikh.mohammad1099@gmail.com",
-          };
+          updated[updated.length - 1] = { role: "assistant", content: friendly };
           return updated;
         });
       } finally {
