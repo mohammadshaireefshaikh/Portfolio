@@ -68,4 +68,81 @@
     position: relative;
     overflow: hidden;
   }
+
+  /* ─── Apple-style Liquid Glass ─────────────────────────── */
+  .liquid-glass {
+    position: relative;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -1px 1px rgba(255, 255, 255, 0.05);
+    transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
+  }
+
+  /* specular sheen — bright top edge fading down, like light on glass */
+  .liquid-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(255, 255, 255, 0.03) 38%,
+      transparent 72%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* slightly denser frost once the page is scrolled */
+  .liquid-glass-scrolled {
+    background: rgba(20, 20, 22, 0.55);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  /* ─── Liquid Navigation (ported from Obsidian Liquid) ─── */
+  .nav-link {
+    position: relative;
+    z-index: 10;
+  }
+
+  .liquid-selector {
+    position: absolute;
+    height: 36px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 9999px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.2),
+      0 0 15px rgba(255, 255, 255, 0.1);
+    transition: all 0.5s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  .liquid-selector.active {
+    opacity: 1;
+  }
+
+  .liquid-glass-btn {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+  }
+
+  .liquid-glass-btn:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 0 15px rgba(255, 255, 255, 0.1);
+  }
 }
