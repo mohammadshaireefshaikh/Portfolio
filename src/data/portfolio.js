@@ -10,7 +10,7 @@ export const personal = {
   email: "shaikh.mohammad1099@gmail.com",
   github: "https://github.com/mohammadshaikh",
   linkedin: "https://linkedin.com/in/mohammadshaikh",
-  cvUrl: "/cv-mohammad-shaikh.pdf",
+  cvUrl: `${import.meta.env.BASE_URL}cv-mohammad-shaikh.pdf`,
 };
 
 export const stats = [
