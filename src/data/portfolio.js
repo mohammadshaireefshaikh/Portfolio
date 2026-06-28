@@ -8,8 +8,8 @@ export const personal = {
   bio: "Software engineer with 3 years of experience. I build XR apps in Unity and full-stack web tools, most recently an app that lets you control a physical robot with your hands on a Meta Quest 3.",
   location: "Liverpool, United Kingdom",
   email: "shaikh.mohammad1099@gmail.com",
-  github: "https://github.com/mohammadshaikh",
-  linkedin: "https://linkedin.com/in/mohammadshaikh",
+  github: "https://github.com/mohammadshaireefshaikh",
+  linkedin: "https://www.linkedin.com/in/mohammad-shaikh1005/",
   cvUrl: `${import.meta.env.BASE_URL}cv-mohammad-shaikh.pdf`,
 };
 
@@ -143,7 +143,7 @@ export const projects = [
     title: "ConicalGaufres AR",
     description: "An AR app for a Belgian waffle brand. Point your phone at the packaging and you see a 3D version of the product, nutrition info, and a way to order, without leaving the camera.",
     tech: ["Unity3D", "AR Foundation", "ARCore", "ARKit", "C#"],
-    github: "https://github.com/mohammadshaikh/conicalgaufres-ar",
+    github: "https://github.com/mohammadshaireefshaikh/conicalgaufres-ar",
     demo: null,
     featured: true,
     year: "2023",
@@ -154,7 +154,7 @@ export const projects = [
     title: "M.A.D — My Assignments Done",
     description: "A web app for managing university assignments. Track deadlines, share files, work with teammates, and get notified when things change.",
     tech: ["React", "Python", "FastAPI", "PostgreSQL", "Docker"],
-    github: "https://github.com/mohammadshaikh/mad-assignments",
+    github: "https://github.com/mohammadshaireefshaikh/mad-assignments",
     demo: null,
     featured: false,
     year: "2024",

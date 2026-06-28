@@ -25,8 +25,8 @@ Yes — projects are listed on this portfolio. Some have GitHub links: Marbles B
 
 ## How do I contact him?
 - Email: shaikh.mohammad1099@gmail.com
-- LinkedIn: https://linkedin.com/in/mohammadshaikh
-- GitHub: https://github.com/mohammadshaikh
+- LinkedIn: https://www.linkedin.com/in/mohammad-shaikh1005/
+- GitHub: https://github.com/mohammadshaireefshaikh
 
 ## Is he available for freelance?
 His portfolio indicates he is open to opportunities. Contact him directly at shaikh.mohammad1099@gmail.com to discuss availability.
