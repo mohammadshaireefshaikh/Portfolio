@@ -12,7 +12,7 @@ He is a self-described "vibe coder" — he uses AI tools like Claude, Cursor, an
 
 ## Contact
 - Email: shaikh.mohammad1099@gmail.com
-- GitHub: https://github.com/mohammadshaikh
-- LinkedIn: https://linkedin.com/in/mohammadshaikh
+- GitHub: https://github.com/mohammadshaireefshaikh
+- LinkedIn: https://www.linkedin.com/in/mohammad-shaikh1005/
 - Location: Liverpool, United Kingdom
 - CV: Available for download on the portfolio website

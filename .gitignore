@@ -34,6 +34,9 @@ server/embeddings.json
 
 .vercel
 .env*
+
+# Local Claude Code preview config (per-dev tooling, not part of the project)
+.claude/
 # VITE_* vars are public (inlined into client bundle).
 # Allow .env.production in git so GitHub Actions can build with the right API URL.
 !.env.production

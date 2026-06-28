@@ -42,7 +42,7 @@ Multiplayer marble arena game built in Unity. Roll your marble around a 3D map a
 ## ConicalGaufres AR
 **Year:** 2023
 **Tech:** Unity3D, AR Foundation, ARCore, ARKit, C#
-**GitHub:** https://github.com/mohammadshaikh/conicalgaufres-ar
+**GitHub:** https://github.com/mohammadshaireefshaikh/conicalgaufres-ar
 
 AR app for a Belgian waffle brand. Point your phone at the packaging and you see a 3D version of the product, nutrition information, and a way to order — all without leaving the camera view. Works on both iOS (ARKit) and Android (ARCore).
 
@@ -51,6 +51,6 @@ AR app for a Belgian waffle brand. Point your phone at the packaging and you see
 ## M.A.D — My Assignments Done
 **Year:** 2024
 **Tech:** React, Python, FastAPI, PostgreSQL, Docker
-**GitHub:** https://github.com/mohammadshaikh/mad-assignments
+**GitHub:** https://github.com/mohammadshaireefshaikh/mad-assignments
 
 Web app for managing university assignments. Track deadlines, share files, collaborate with teammates, and get notified when things change. Full-stack: React frontend, Python/FastAPI backend, PostgreSQL database, Docker for deployment.

@@ -2,8 +2,8 @@
 
 ## Direct Contact
 - **Email:** shaikh.mohammad1099@gmail.com
-- **LinkedIn:** https://linkedin.com/in/mohammadshaikh
-- **GitHub:** https://github.com/mohammadshaikh
+- **LinkedIn:** https://www.linkedin.com/in/mohammad-shaikh1005/
+- **GitHub:** https://github.com/mohammadshaireefshaikh
 - **Location:** Liverpool, United Kingdom
 - **CV:** Available for download on the portfolio website
 
@@ -16,6 +16,6 @@ Mohammad is open to:
 - Opportunities in AI, robotics, or immersive tech
 
 ## How to Reach Him
-The best way is to email shaikh.mohammad1099@gmail.com or connect on LinkedIn at https://linkedin.com/in/mohammadshaikh.
+The best way is to email shaikh.mohammad1099@gmail.com or connect on LinkedIn at https://www.linkedin.com/in/mohammad-shaikh1005/.
 
-You can also find his open-source work on GitHub at https://github.com/mohammadshaikh.
+You can also find his open-source work on GitHub at https://github.com/mohammadshaireefshaikh.
