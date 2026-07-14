@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, MessageSquare, ChevronDown } from "lucide-react";
+import { X, Send, ChevronDown, Sparkles } from "lucide-react";
 import ChatMessage from "./ChatMessage";
 
 const STARTER_PROMPTS = [
@@ -22,6 +22,7 @@ const API_URL = import.meta.env.VITE_API_URL || "/api/chat";
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
   const [messages, setMessages] = useState([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,31 @@ export default function ChatWidget() {
       return () => clearTimeout(t);
     }
   }, [open]);
+
+  // Listen for external open requests (e.g. hero CTA button)
+  useEffect(() => {
+    const onOpen = () => {
+      setOpen(true);
+      setShowTooltip(false);
+    };
+    window.addEventListener("open-chat", onOpen);
+    return () => window.removeEventListener("open-chat", onOpen);
+  }, []);
+
+  // Show first-visit tooltip once, then hide on any interaction
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem("chat-tooltip-seen")) return;
+    const show = setTimeout(() => setShowTooltip(true), 2500);
+    const hide = setTimeout(() => {
+      setShowTooltip(false);
+      localStorage.setItem("chat-tooltip-seen", "1");
+    }, 8500);
+    return () => {
+      clearTimeout(show);
+      clearTimeout(hide);
+    };
+  }, []);
 
   const sendMessage = useCallback(
     async (text) => {
@@ -291,44 +317,107 @@ export default function ChatWidget() {
         )}
       </AnimatePresence>
 
-      {/* ── Floating button ─────────────────────────────────────── */}
-      <motion.button
+      {/* ── First-visit tooltip ─────────────────────────────────── */}
+      <AnimatePresence>
+        {showTooltip && !open && (
+          <motion.div
+            initial={{ opacity: 0, x: 12, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 12, scale: 0.9 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed bottom-8 right-24 z-50 pointer-events-none"
+          >
+            <div
+              className="relative px-4 py-2.5 rounded-2xl text-sm font-medium text-white whitespace-nowrap"
+              style={{
+                background: "#0d0d0d",
+                border: "1px solid rgba(255,255,255,0.1)",
+                boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
+              }}
+            >
+              Ask me anything about Mohammad
+              {/* Arrow */}
+              <span
+                className="absolute top-1/2 -right-1.5 w-3 h-3 rotate-45 -translate-y-1/2"
+                style={{
+                  background: "#0d0d0d",
+                  borderRight: "1px solid rgba(255,255,255,0.1)",
+                  borderTop: "1px solid rgba(255,255,255,0.1)",
+                }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Floating button with pulsing halo ───────────────────── */}
+      <motion.div
         initial={{ opacity: 0, scale: 0.7 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, delay: 1.8, ease: [0.22, 1, 0.36, 1] }}
-        onClick={() => setOpen((o) => !o)}
-        whileTap={{ scale: 0.92 }}
-        className="fixed bottom-5 right-5 z-50 w-14 h-14 flex items-center justify-center rounded-full"
-        style={{
-          background: "#0071e3",
-          boxShadow: "0 4px 20px rgba(0,113,227,0.45)",
-        }}
-        aria-label={open ? "Close chat" : "Chat with Mohammad's assistant"}
+        className="fixed bottom-5 right-5 z-50"
       >
-        <AnimatePresence mode="wait" initial={false}>
-          {open ? (
+        {/* Pulsing halo — only when closed */}
+        {!open && (
+          <>
             <motion.span
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-              transition={{ duration: 0.18 }}
-            >
-              <ChevronDown size={22} color="white" />
-            </motion.span>
-          ) : (
+              aria-hidden
+              className="absolute inset-0 rounded-full"
+              style={{ background: "#0071e3" }}
+              animate={{ scale: [1, 1.6, 1.6], opacity: [0.35, 0, 0] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
+            />
             <motion.span
-              key="open"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-              transition={{ duration: 0.18 }}
-            >
-              <MessageSquare size={22} color="white" />
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </motion.button>
+              aria-hidden
+              className="absolute inset-0 rounded-full"
+              style={{ background: "#0071e3" }}
+              animate={{ scale: [1, 1.6, 1.6], opacity: [0.35, 0, 0] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut", delay: 1.2 }}
+            />
+          </>
+        )}
+
+        <motion.button
+          onClick={() => {
+            setOpen((o) => !o);
+            setShowTooltip(false);
+            localStorage.setItem("chat-tooltip-seen", "1");
+          }}
+          whileHover={{ scale: 1.06 }}
+          whileTap={{ scale: 0.92 }}
+          className="relative w-14 h-14 flex items-center justify-center rounded-full"
+          style={{
+            background: "#0071e3",
+            boxShadow: "0 4px 20px rgba(0,113,227,0.45)",
+            transition: "box-shadow 250ms ease-out",
+          }}
+          aria-label={open ? "Close chat" : "Chat with Mohammad's assistant"}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            {open ? (
+              <motion.span
+                key="close"
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+                transition={{ duration: 0.18 }}
+              >
+                <ChevronDown size={22} color="white" />
+              </motion.span>
+            ) : (
+              <motion.span
+                key="open"
+                initial={{ rotate: 90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: -90, opacity: 0 }}
+                transition={{ duration: 0.18 }}
+              >
+                <Sparkles size={20} color="white" />
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
+      </motion.div>
     </>
   );
 }

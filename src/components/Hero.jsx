@@ -3,6 +3,7 @@ import { ArrowDown } from "lucide-react";
 import { GitHubIcon, LinkedInIcon } from "./Icons";
 import GlassButton from "./GlassButton";
 import OrbVisual from "./OrbVisual";
+import HeroChatCTA from "./HeroChatCTA";
 import { personal } from "../data/portfolio";
 
 const containerVariants = {
@@ -68,11 +69,15 @@ export default function Hero() {
 
             <motion.p
               variants={itemVariants}
-              className="text-base sm:text-lg leading-relaxed max-w-lg mb-10"
+              className="text-base sm:text-lg leading-relaxed max-w-lg mb-8"
               style={{ color: "#6e6e73" }}
             >
               {personal.bio}
             </motion.p>
+
+            <motion.div variants={itemVariants} className="mb-8">
+              <HeroChatCTA />
+            </motion.div>
 
             <motion.div variants={itemVariants} className="flex flex-wrap gap-3 mb-10">
               <GlassButton variant="primary" onClick={() => scrollTo("#projects")}>

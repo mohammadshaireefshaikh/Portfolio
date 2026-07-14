@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { motion } from "framer-motion";
 import { ExternalLink } from "lucide-react";
 import { GitHubIcon } from "./Icons";
@@ -17,7 +18,22 @@ const cardVariants = {
   }),
 };
 
+// Cursor-follow spotlight helper — writes --x/--y CSS vars on the element
+function useSpotlight() {
+  const ref = useRef(null);
+  const onMouseMove = (e) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    el.style.setProperty("--x", `${e.clientX - rect.left}px`);
+    el.style.setProperty("--y", `${e.clientY - rect.top}px`);
+  };
+  return { ref, onMouseMove };
+}
+
 function FeaturedProjectCard({ project, index }) {
+  const { ref, onMouseMove } = useSpotlight();
+
   return (
     <motion.div
       custom={index}
@@ -28,13 +44,26 @@ function FeaturedProjectCard({ project, index }) {
       className="col-span-full"
     >
       <div
-        className="overflow-hidden rounded-3xl"
+        ref={ref}
+        onMouseMove={onMouseMove}
+        className="group relative overflow-hidden rounded-3xl"
         style={{
           background: "#111111",
           border: "1px solid rgba(0,113,227,0.2)",
+          transition: "border-color 300ms ease-out, transform 400ms cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
-        <div className="flex flex-col md:flex-row md:items-stretch">
+        {/* Cursor spotlight */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100"
+          style={{
+            background:
+              "radial-gradient(400px circle at var(--x) var(--y), rgba(0,113,227,0.15), transparent 60%)",
+            transition: "opacity 400ms ease-out",
+          }}
+        />
+        <div className="relative flex flex-col md:flex-row md:items-stretch">
           <div className="flex-1 p-8 md:p-12">
             <div className="flex items-center gap-3 mb-5">
               <span className="text-xs font-medium text-[#0071e3] tracking-[0.15em] uppercase">
@@ -101,11 +130,16 @@ function FeaturedProjectCard({ project, index }) {
           </div>
 
           {project.image && (
-            <div className="md:w-72 shrink-0">
+            <div className="md:w-72 shrink-0 overflow-hidden">
               <img
                 src={imgSrc(project.image)}
                 alt={project.title}
                 className="w-full h-56 md:h-full object-cover"
+                style={{
+                  transition: "transform 700ms cubic-bezier(0.22, 1, 0.36, 1)",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
               />
             </div>
           )}
@@ -126,18 +160,32 @@ function SmallProjectCard({ project, index }) {
       className="h-full"
     >
       <div
-        className="h-full overflow-hidden rounded-2xl flex flex-col"
+        className="group h-full overflow-hidden rounded-2xl flex flex-col"
         style={{
           background: "rgba(255,255,255,0.03)",
           border: "1px solid rgba(255,255,255,0.07)",
+          transition: "border-color 300ms ease-out, transform 400ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = "rgba(0,113,227,0.35)";
+          e.currentTarget.style.transform = "translateY(-2px)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
+          e.currentTarget.style.transform = "translateY(0)";
         }}
       >
         {project.image && (
-          <img
-            src={imgSrc(project.image)}
-            alt={project.title}
-            className="w-full h-36 object-cover shrink-0"
-          />
+          <div className="overflow-hidden shrink-0">
+            <img
+              src={imgSrc(project.image)}
+              alt={project.title}
+              className="w-full h-36 object-cover"
+              style={{ transition: "transform 700ms cubic-bezier(0.22, 1, 0.36, 1)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.06)")}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            />
+          </div>
         )}
         <div className="flex flex-col flex-1 p-6">
           <div className="flex items-start justify-between gap-3 mb-4">
