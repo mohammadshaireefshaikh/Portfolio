@@ -24,16 +24,17 @@ export default function HeroChatCTA() {
       }}
       aria-label="Open AI assistant"
     >
-      {/* Pulsing sparkle badge */}
+      {/* Pulsing sparkle badge — single expand+fade per cycle */}
       <span className="relative flex items-center justify-center w-8 h-8 rounded-xl shrink-0"
         style={{ background: "#0071e3" }}
       >
         {!reduceMotion && (
           <motion.span
+            aria-hidden
             className="absolute inset-0 rounded-xl"
-            style={{ background: "#0071e3" }}
-            animate={{ scale: [1, 1.35, 1], opacity: [0.5, 0, 0] }}
-            transition={{ duration: 2.2, repeat: Infinity, ease: "easeOut" }}
+            style={{ background: "#0071e3", willChange: "transform, opacity" }}
+            animate={{ scale: [1, 1.5], opacity: [0.45, 0] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: "easeOut", repeatDelay: 0.2 }}
           />
         )}
         <Sparkles size={14} className="relative text-white" />

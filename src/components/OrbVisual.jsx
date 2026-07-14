@@ -2,7 +2,7 @@ import { motion, useReducedMotion } from "framer-motion";
 
 const METRICS = [
   {
-    value: "Vibe Coder",
+    value: "Software Developer",
     label: "AI-assisted development",
     context: "Claude · Cursor · GitHub Copilot",
   },
