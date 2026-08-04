@@ -41,7 +41,7 @@ export default function Contact() {
 };
 
   const inputClass =
-    "w-full px-4 py-3.5 text-sm text-white placeholder-[#555] rounded-xl outline-none transition-all duration-200";
+    "w-full px-4 py-3.5 text-sm text-white placeholder-[#555] rounded-xl outline-none transition-[border-color,background-color,box-shadow] duration-200 ease-out";
   const inputStyle = {
     background: "rgba(255,255,255,0.04)",
     border: "1px solid rgba(255,255,255,0.08)",
