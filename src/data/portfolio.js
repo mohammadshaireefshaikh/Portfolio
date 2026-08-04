@@ -108,6 +108,7 @@ export const projects = [
     demoLabel: "Try It",
     year: "2026",
     impact: "Used by Currys staff across UK",
+    image: "/img/DealCalculator.png",
     longDescription: [
       "Mobile phone deals are hard to compare honestly. One has a big upfront cost and a low monthly, another is £0 upfront with a higher monthly, and both are subject to annual April price increases — so the sticker prices never tell the real story.",
       "DealCalculator was built for shop-floor use: a large-type, mobile-responsive, two-column calculator where staff enter the numbers in front of the customer and instantly see the total cost of each option over the full term, which one is cheaper, and the exact saving.",
@@ -132,6 +133,7 @@ export const projects = [
     demoLabel: "Play Now",
     year: "2026",
     impact: "In development",
+    image: "/img/SwingState.png",
     longDescription: [
       "A physics-based endless climbing game. The player scales an infinite tower of floating rock islands using two web-shooters — grapple lines fired from each hand that can be reeled in or slackened to build pendulum momentum.",
       "Score is how high you climb. Death is falling too far below your peak. Solo, or 2-player online co-op where a rope tether physically links both players. Accounts are required, and progress + settings sync to Unity Cloud Save.",
@@ -155,6 +157,8 @@ export const projects = [
     demo: null,
     year: "2025",
     impact: "Google Cloud AI Innovator",
+    image: "/img/RoboticHandReader.png",
+    image: "/img/RoboticHandReader.png",
     longDescription: [
       "An XR app on Meta Quest 3 that lets a user control a physical robot using their hands in real time. Hand tracking data is captured on the headset and streamed to the robot; telemetry from the robot flows back through Google Cloud.",
       "Built at TeknTrash Robotics. Includes a native Unity–Android plugin written from scratch to talk directly to the robot hardware, and a web dashboard the team uses to monitor connections and data in real time via Firebase.",
@@ -176,6 +180,8 @@ export const projects = [
     demo: null,
     year: "2022–2023",
     impact: "+20% usage",
+    image: "/img/CarConfigurator.png",
+    image: "/img/CarConfigurator.png",
     longDescription: [
       "Rebuilt the 3D showroom apps used by MG, Maruti Suzuki, and Jeep dealerships in India. Customers could explore vehicles in full 3D detail; staff had a separate analytics dashboard showing usage stats and Mapbox location data.",
       "Shipped and measured: product usage went up 20% across dealership showrooms, customer satisfaction scores improved 15%, and support requests dropped 30%.",
@@ -197,6 +203,8 @@ export const projects = [
     demoLabel: "Play Now",
     year: "2022",
     impact: null,
+    image: "/img/UnityLearning.png",
+    image: "/img/UnityLearning.png",
     longDescription: [
       "Built as part of the Unity Essentials Pathway. Covers foundational Unity 6 skills: scene creation, GameObjects and components, materials and lighting, audio, and basic scripting.",
       "This was my first hands-on experience bringing together the core tools and workflows of the Unity Editor to create an interactive 3D and 2D experience.",
