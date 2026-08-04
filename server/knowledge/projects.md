@@ -1,5 +1,36 @@
 # Projects
 
+## DealCalculator — Currys Retail Tool
+**Year:** 2026
+**Tech:** HTML, CSS, vanilla JavaScript, GitHub Actions, GitHub Pages, Playwright
+**Live demo:** https://mohammadshaireefshaikh.github.io/DealCalculator/
+**GitHub:** https://github.com/mohammadshaireefshaikh/DealCalculator
+**Impact:** Getting recognised and used by Currys / Carphone Warehouse retail staff across the UK
+
+A one-page calculator built for shop-floor use at Currys / Carphone Warehouse. Retail staff enter two mobile phone deals — Contract vs Contract, or SIM Free + SIM Only vs Contract — and instantly see which one is genuinely cheaper over the full term. Correctly models the UK's annual April price increases (so a 24-month contract typically catches two rises) and produces a dated payment roadmap the customer can read like a printed quote — "Jul 2026 – Mar 2027 · 9 × £35/mo · £315.00", "Apr 2027 – Mar 2028 · 12 × £36.50/mo · £438.00", etc.
+
+Built as a single self-contained HTML file (~65 KB) with zero dependencies, no frameworks, and no external requests — fonts embedded as woff2 data URIs. Behaviour verified with Playwright in headless Chromium. Continuously deployed to GitHub Pages via GitHub Actions on every push to main.
+
+---
+
+## Swing State: Rage Edition
+**Year:** 2026 (in active development)
+**Tech:** Unity 6, C#, URP, Netcode for GameObjects, Unity Cloud Save, Unity Relay, WebGL
+**Play now:** https://play.unity.com/en/games/c197861d-7c2b-4413-a1bc-f2b150d9a047/swing-state
+**Status:** Solo development, playable WebGL build live on Unity Play
+
+Physics-based endless climbing game. The player scales an infinite tower of floating rock islands using two web-shooters — grapple lines fired from each hand that can be reeled in or slackened to build pendulum momentum. Getting Over It punishment meets Spider-Man traversal.
+
+- **Score:** how high you climb. **Death:** falling too far below your peak.
+- Solo, or 2-player online co-op where a rope tether physically links both players.
+- Cloud-synced accounts (username/password login), profile and settings persist across sessions.
+- Live day → dusk → night atmosphere driven by climb height.
+- Custom netcode via Unity's Netcode for GameObjects; online lobbies over Unity Relay by code.
+
+Technically notable: the whole thing runs in a 2.5D constraint (true 3D physics locked to the z = 0 plane), the swing is not scripted movement but a real `SpringJoint` that physics resolves into a pendulum, and reeling actually pumps energy into the swing — which had to be capped or velocity would compound without limit. The repo is private while the game is in development; Windows/Steam release is the eventual target.
+
+---
+
 ## Real-Time Robotic Hand Control XR
 **Year:** 2025
 **Tech:** Unity3D, Meta Quest 3, Android Native Plugins, Google Cloud Platform, C#

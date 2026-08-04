@@ -99,6 +99,28 @@ export const experience = [
 
 export const projects = [
   {
+    title: "DealCalculator — Currys Retail Tool",
+    description: "A one-page calculator built for Currys / Carphone Warehouse staff to close mobile phone deals fast. Compares two deals side by side including UK April price rises, and prints a dated payment roadmap the customer can see instantly. Now getting picked up by retail teams across the UK. Single self-contained HTML file, zero dependencies, tested with Playwright, auto-deployed via GitHub Actions.",
+    tech: ["HTML", "CSS", "JavaScript", "GitHub Actions", "Playwright"],
+    github: "https://github.com/mohammadshaireefshaikh/DealCalculator",
+    demo: "https://mohammadshaireefshaikh.github.io/DealCalculator/",
+    demoLabel: "Try It",
+    featured: true,
+    year: "2026",
+    impact: "Used by Currys staff across UK",
+  },
+  {
+    title: "Swing State: Rage Edition",
+    description: "Physics-based endless climbing game. Two web-shooters, pendulum momentum, and 2-player online co-op where a rope tether physically links both players. Getting Over It punishment meets Spider-Man traversal. Built in Unity 6 with Netcode for GameObjects, cloud-synced accounts, and a live day–night cycle. Currently in active development.",
+    tech: ["Unity 6", "C#", "URP", "Netcode for GameObjects", "Unity Cloud Save", "WebGL"],
+    github: null,
+    demo: "https://play.unity.com/en/games/c197861d-7c2b-4413-a1bc-f2b150d9a047/swing-state",
+    demoLabel: "Play Now",
+    featured: true,
+    year: "2026",
+    impact: "In development",
+  },
+  {
     title: "Real-Time Robotic Hand Control XR",
     description: "An XR app on Meta Quest 3 that lets you move your hands to control a real robot. Robot data flows through Google Cloud.",
     tech: ["Unity3D", "Meta Quest 3", "Android Native Plugins", "GCP", "C#"],
