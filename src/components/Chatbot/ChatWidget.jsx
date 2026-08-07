@@ -357,22 +357,33 @@ export default function ChatWidget() {
         transition={{ duration: 0.4, delay: 1.8, ease: [0.22, 1, 0.36, 1] }}
         className="fixed bottom-5 right-5 z-50"
       >
-        {/* Pulsing halo — only when closed */}
+        {/* Pulsing halo — only when closed. Two rings, phase-offset for continuous breath. */}
         {!open && (
           <>
             <motion.span
               aria-hidden
-              className="absolute inset-0 rounded-full"
-              style={{ background: "#0071e3" }}
-              animate={{ scale: [1, 1.6, 1.6], opacity: [0.35, 0, 0] }}
-              transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
+              className="absolute inset-0 rounded-full pointer-events-none"
+              style={{ background: "#0071e3", willChange: "transform, opacity" }}
+              animate={{ scale: [1, 1.7], opacity: [0.4, 0] }}
+              transition={{
+                duration: 2.2,
+                repeat: Infinity,
+                ease: "easeOut",
+                repeatDelay: 0.3,
+              }}
             />
             <motion.span
               aria-hidden
-              className="absolute inset-0 rounded-full"
-              style={{ background: "#0071e3" }}
-              animate={{ scale: [1, 1.6, 1.6], opacity: [0.35, 0, 0] }}
-              transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut", delay: 1.2 }}
+              className="absolute inset-0 rounded-full pointer-events-none"
+              style={{ background: "#0071e3", willChange: "transform, opacity" }}
+              animate={{ scale: [1, 1.7], opacity: [0.4, 0] }}
+              transition={{
+                duration: 2.2,
+                repeat: Infinity,
+                ease: "easeOut",
+                repeatDelay: 0.3,
+                delay: 1.25,
+              }}
             />
           </>
         )}
