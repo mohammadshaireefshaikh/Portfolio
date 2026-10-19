@@ -1,5 +1,55 @@
 # Projects
 
+## RMS Interio — Studio Site + CRM
+**Year:** 2026
+**Tech:** Next.js, React, Supabase, Tailwind, TypeScript
+**Live:** https://rmsinterio.com/
+**Status:** Live client project (Pune-based interior design studio)
+
+Two surfaces for one studio: a public-facing site that sells the brand's interior design work, and a private CRM the team uses to manage leads, quotes, and projects. Built on Next.js with Supabase as the database and auth layer.
+
+---
+
+## FixMyHair — UK Hair Loss Clinic
+**Year:** 2026
+**Tech:** Next.js, React, Tailwind, Twilio, WebGL
+**Live:** https://fixmyhair.co.uk/
+**Status:** Live production site
+
+Front-facing website for a UK hair-restoration clinic. Cinematic homepage, honest clinical copy, booking flow, Twilio-backed messaging for nurture texts and consultation reminders. Lists partner clinics across Liverpool, Nottingham, London, and Manchester with their CQC references.
+
+---
+
+## FightMedics — Combat Sports Medics
+**Year:** 2026
+**Tech:** Next.js, React, WebGL, Vercel, Tailwind
+**Live:** https://fightmedics.com/
+**Status:** Live production site
+
+Public marketing site for FightMedics — the medical team that covers combat sports events across the UK. WebGL hero, event booking, team directory.
+
+---
+
+## FightMedics CRM
+**Year:** 2026
+**Tech:** Next.js, React, Supabase, Tailwind, Vercel
+**Live:** https://crm.fightmedics.com/
+**Status:** Internal tool
+
+Private CRM that pairs with the public FightMedics site. The team uses it to manage upcoming events, assign medics, track bookings, and keep client records in one place. Deployed as a separate Vercel project on a subdomain with its own auth.
+
+---
+
+## Nitya Village
+**Year:** 2026
+**Tech:** HTML, CSS, JavaScript, Cloudflare Pages
+**Live:** https://nitya-village.pages.dev/
+**Status:** Live
+
+Static website deployed on Cloudflare Pages for the Nitya Village community.
+
+---
+
 ## DealCalculator — Currys Retail Tool
 **Year:** 2026
 **Tech:** HTML, CSS, vanilla JavaScript, GitHub Actions, GitHub Pages, Playwright
