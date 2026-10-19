@@ -126,8 +126,16 @@ export const projects = [
     impact: "Live production site",
     image: "/img/fixmyhair.jpg",
     longDescription: [
-      "Front-facing site for a UK hair-restoration clinic. Built around a cinematic homepage, honest clinical copy, and a booking flow that routes enquiries directly into the clinic's workflow.",
-      "Twilio handles the messaging layer so the clinic can send nurture texts and consultation reminders without a separate tool. Partner clinics across Liverpool, Nottingham, London, and Manchester are listed with their CQC references.",
+      "UX, UI, and front-end build for a UK hair restoration service. The site leads with diagnosis before any treatment talk, shows fixed prices up front, and turns every section into a route to a two-minute free assessment.",
+      "Key moments: hero + 3D clinic scene, trust bar, before/after slider, 'what describes you?' self-select, six treatment paths, four-step journey, 12-month growth timeline, and transparent pricing.",
+      "Twilio powers the messaging layer so the clinic sends nurture texts and consultation reminders without a separate tool. Partner clinics across Liverpool, Nottingham, London, and Manchester listed with CQC references.",
+    ],
+    highlights: [
+      "Diagnosis-first flow — assessment before any sales pitch",
+      "Fixed, transparent pricing on every treatment page",
+      "Interactive before/after slider and 12-month growth timeline",
+      "Twilio-backed messaging for nurture texts and reminders",
+      "GMC-registered doctors, CQC-regulated partner facilities",
     ],
   },
   {
