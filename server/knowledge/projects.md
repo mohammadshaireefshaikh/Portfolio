@@ -40,13 +40,13 @@ Private CRM that pairs with the public FightMedics site. The team uses it to man
 
 ---
 
-## Nitya Village
+## Nitya Village — 3D Engineer Portfolio
 **Year:** 2026
-**Tech:** HTML, CSS, JavaScript, Cloudflare Pages
+**Tech:** Three.js, WebGL, JavaScript, Cloudflare Pages
 **Live:** https://nitya-village.pages.dev/
 **Status:** Live
 
-Static website deployed on Cloudflare Pages for the Nitya Village community.
+Interactive 3D village portfolio site for Nitya Singh, a sustainable civil and structural engineer. Each building on an orbit-able low-poly island represents a different portfolio section — Profile, Education, Experience, Projects, Publications, Skills, Hall of Fame. Day / Evening / Night toggles switch the lighting. Clicking any building opens its detail panel.
 
 ---
 

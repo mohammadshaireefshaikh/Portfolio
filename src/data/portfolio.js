@@ -108,6 +108,7 @@ export const projects = [
     demoLabel: "Visit Site",
     year: "2026",
     impact: "Live client project",
+    image: "/img/rms-interio.jpg",
     longDescription: [
       "Two surfaces for one studio: a public-facing site that sells the brand's interior work, and a private CRM the team uses to manage leads, quotes, and projects.",
       "Built on Next.js with Supabase as the database and auth layer. Keeps the public pages fast and SEO-friendly while giving the internal team a real workbench instead of spreadsheets.",
@@ -123,6 +124,7 @@ export const projects = [
     demoLabel: "Visit Site",
     year: "2026",
     impact: "Live production site",
+    image: "/img/fixmyhair.jpg",
     longDescription: [
       "Front-facing site for a UK hair-restoration clinic. Built around a cinematic homepage, honest clinical copy, and a booking flow that routes enquiries directly into the clinic's workflow.",
       "Twilio handles the messaging layer so the clinic can send nurture texts and consultation reminders without a separate tool. Partner clinics across Liverpool, Nottingham, London, and Manchester are listed with their CQC references.",
@@ -138,6 +140,7 @@ export const projects = [
     demoLabel: "Visit Site",
     year: "2026",
     impact: "Live production site",
+    image: "/img/fightmedics-site.jpg",
     longDescription: [
       "Public marketing site for FightMedics — the medical team that covers combat sports events across the UK.",
       "WebGL-driven hero sets the tone, the rest of the site handles the practical stuff: what they do, how to book cover for an event, and who's on the team.",
@@ -153,6 +156,7 @@ export const projects = [
     demoLabel: "View CRM",
     year: "2026",
     impact: "Internal tool",
+    image: "/img/fightmedics-crm.jpg",
     longDescription: [
       "Private CRM that pairs with the FightMedics public site. The team uses it to manage upcoming events, assign medics, track bookings, and keep client records in one place.",
       "Deployed as a separate Vercel project on a subdomain, with its own auth. The public site stays fast and marketing-focused; the operations work happens here.",
@@ -160,16 +164,18 @@ export const projects = [
   },
   {
     id: "nitya-village",
-    title: "Nitya Village",
-    description: "Website for the Nitya Village community. Deployed on Cloudflare Pages.",
-    tech: ["HTML", "CSS", "JavaScript", "Cloudflare Pages"],
+    title: "Nitya Village — 3D Engineer Portfolio",
+    description: "Interactive 3D village portfolio site for Nitya Singh, a sustainable civil & structural engineer. Each building opens a different section — Profile, Projects, Skills, Publications.",
+    tech: ["Three.js", "WebGL", "JavaScript", "Cloudflare Pages"],
     github: null,
     demo: "https://nitya-village.pages.dev/",
-    demoLabel: "Visit Site",
+    demoLabel: "Explore Village",
     year: "2026",
     impact: "Live",
+    image: "/img/nitya-village.jpg",
     longDescription: [
-      "Static website deployed on Cloudflare Pages. Fast, free hosting with Cloudflare's global CDN.",
+      "A playful alternative to the usual static CV: an orbit-able 3D village where each building represents a section of Nitya Singh's portfolio — Profile, Education, Experience, Projects, Publications, Skills, Hall of Fame.",
+      "Day / Evening / Night toggles change the lighting, and clicking a building opens its detail panel. Built with Three.js and deployed on Cloudflare Pages for free global hosting.",
     ],
   },
   {
