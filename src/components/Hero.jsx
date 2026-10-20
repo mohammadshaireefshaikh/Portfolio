@@ -30,21 +30,24 @@ export default function Hero() {
     document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
 
   return (
-    <section className="relative min-h-screen px-6 pt-20 pb-10 overflow-hidden">
-      <div className="relative z-10 min-h-[calc(100vh-80px)] max-w-6xl mx-auto w-full flex flex-col md:items-start items-center">
-        {/* 3D scene — top of left column (desktop), centred on mobile */}
-        <div className="w-full md:w-[min(560px,55%)] h-[48vh] md:h-[55vh] shrink-0">
-          <Suspense fallback={<div className="w-full h-full" />}>
-            <ConsoleScene />
-          </Suspense>
-        </div>
+    <section className="relative min-h-screen overflow-hidden">
+      {/* 3D room scene — fills the whole hero as the backdrop */}
+      <div className="absolute inset-0 z-0">
+        <Suspense fallback={<div className="w-full h-full bg-black" />}>
+          <ConsoleScene />
+        </Suspense>
+      </div>
 
-        {/* Text block — bottom-left on desktop, centred on mobile */}
+      {/* Text block — floats over the bottom of the hero */}
+      <div className="relative z-10 min-h-screen max-w-6xl mx-auto px-6 pt-20 pb-10 pointer-events-none flex flex-col justify-end">
         <motion.div
-          className="w-full md:max-w-xl md:text-left text-center mt-auto pt-6"
+          className="pointer-events-auto w-full md:max-w-xl md:text-left text-center"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
+          style={{
+            textShadow: "0 2px 24px rgba(0,0,0,0.75)",
+          }}
         >
           <motion.div variants={itemVariants} className="mb-5">
             <span

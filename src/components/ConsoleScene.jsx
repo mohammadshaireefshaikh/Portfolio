@@ -6,9 +6,17 @@ import { X, Volume2, VolumeX, Play, Trophy, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 
 // Camera targets (play distance computed in CameraRig)
-const IDLE_POS = new THREE.Vector3(2.5, 2.5, 4);
-const IDLE_LOOK = new THREE.Vector3(0, 0, 0);
+// IDLE now frames the whole room, not just the arcade cabinet.
+const IDLE_POS = new THREE.Vector3(3.8, 2.2, 5.2);
+const IDLE_LOOK = new THREE.Vector3(0, 0.3, 0);
 const PLAY_LOOK = new THREE.Vector3(0, 0.4, -0.1);
+
+// Room geometry constants
+const ROOM = {
+  size: 10,         // floor is 10×10 (square room)
+  height: 4.5,      // ceiling height
+  floorY: -0.56,    // sits flush under the arcade cabinet's base
+};
 
 // ─── Audio ────────────────────────────────────────────────────
 let audioCtx = null;
@@ -593,6 +601,105 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
   );
 }
 
+/**
+ * RoomShell — floor, three walls, baseboard trim, warm corner lamps,
+ * cool back-wall accent. Phase 1 of the arcade-room build. Furniture
+ * (sofa, pool table, Hot Wheels shelf, One Piece wall, speakers, etc.)
+ * lands in later phases.
+ */
+function RoomShell() {
+  const { size, height, floorY } = ROOM;
+  const ceilY = floorY + height;
+  const midY = (floorY + ceilY) / 2;
+  const half = size / 2;
+
+  return (
+    <group>
+      {/* Floor — warm dark wood */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, floorY, 0]} receiveShadow>
+        <planeGeometry args={[size, size]} />
+        <meshStandardMaterial color="#1e1510" roughness={0.95} />
+      </mesh>
+
+      {/* Rug under the cabinet — tiny patch of warmth so the arcade reads as grounded */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, floorY + 0.001, 0.2]}>
+        <planeGeometry args={[4, 3]} />
+        <meshStandardMaterial color="#2a1618" roughness={1} />
+      </mesh>
+
+      {/* Back wall */}
+      <mesh position={[0, midY, -half]} receiveShadow>
+        <planeGeometry args={[size, height]} />
+        <meshStandardMaterial color="#17181c" roughness={0.95} />
+      </mesh>
+      {/* Left wall */}
+      <mesh rotation={[0, Math.PI / 2, 0]} position={[-half, midY, 0]} receiveShadow>
+        <planeGeometry args={[size, height]} />
+        <meshStandardMaterial color="#1a1a1e" roughness={0.95} />
+      </mesh>
+      {/* Right wall */}
+      <mesh rotation={[0, -Math.PI / 2, 0]} position={[half, midY, 0]} receiveShadow>
+        <planeGeometry args={[size, height]} />
+        <meshStandardMaterial color="#1a1a1e" roughness={0.95} />
+      </mesh>
+      {/* Ceiling — darker, keeps bounce light moody */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, ceilY, 0]}>
+        <planeGeometry args={[size, size]} />
+        <meshStandardMaterial color="#0a0a0e" roughness={1} />
+      </mesh>
+
+      {/* Baseboards (thin dark strips where walls meet floor) */}
+      <mesh position={[0, floorY + 0.08, -half + 0.01]}>
+        <boxGeometry args={[size, 0.15, 0.03]} />
+        <meshStandardMaterial color="#0a0a0c" />
+      </mesh>
+      <mesh position={[-half + 0.01, floorY + 0.08, 0]}>
+        <boxGeometry args={[0.03, 0.15, size]} />
+        <meshStandardMaterial color="#0a0a0c" />
+      </mesh>
+      <mesh position={[half - 0.01, floorY + 0.08, 0]}>
+        <boxGeometry args={[0.03, 0.15, size]} />
+        <meshStandardMaterial color="#0a0a0c" />
+      </mesh>
+
+      {/* Warm lamp spots (front-left + front-right ceiling corners) */}
+      <pointLight
+        position={[-half + 0.6, ceilY - 0.5, half - 0.6]}
+        color="#f5a860"
+        intensity={1.6}
+        distance={9}
+        decay={2}
+        castShadow
+      />
+      <pointLight
+        position={[half - 0.6, ceilY - 0.5, half - 0.6]}
+        color="#f5a860"
+        intensity={1.6}
+        distance={9}
+        decay={2}
+      />
+      {/* Cool rim light bouncing off the back wall */}
+      <pointLight
+        position={[0, ceilY - 0.5, -half + 0.8]}
+        color="#4a7eff"
+        intensity={0.9}
+        distance={7}
+        decay={2}
+      />
+
+      {/* Glowing lamp placeholders so the light sources read on the ceiling */}
+      <mesh position={[-half + 0.6, ceilY - 0.1, half - 0.6]}>
+        <sphereGeometry args={[0.08, 12, 12]} />
+        <meshStandardMaterial color="#ffcf90" emissive="#ffcf90" emissiveIntensity={1.5} toneMapped={false} />
+      </mesh>
+      <mesh position={[half - 0.6, ceilY - 0.1, half - 0.6]}>
+        <sphereGeometry args={[0.08, 12, 12]} />
+        <meshStandardMaterial color="#ffcf90" emissive="#ffcf90" emissiveIntensity={1.5} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
 function CameraRig({ mode, reduceMotion }) {
   const { camera, size } = useThree();
   const look = useRef(new THREE.Vector3().copy(IDLE_LOOK));
@@ -740,15 +847,21 @@ export default function ConsoleScene() {
         }}
       >
         {inGame && <color attach="background" args={["#0a0d14"]} />}
-        <ambientLight intensity={0.35} />
+        {/* Lighting: moody base + warm/cool point lights live inside RoomShell */}
+        <ambientLight intensity={0.18} />
         <directionalLight
           position={[4, 5, 3]}
-          intensity={1.1}
+          intensity={0.55}
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
         />
-        <directionalLight position={[-3, 2, -2]} intensity={0.3} color="#4a9eff" />
+        <directionalLight position={[-3, 2, -2]} intensity={0.25} color="#4a9eff" />
+
+        {/* Phase 1 — room shell only. Fades out while the game is in play */}
+        <Suspense fallback={null}>
+          {mode !== "playing" && mode !== "dead" && <RoomShell />}
+        </Suspense>
 
         <CameraRig mode={mode} reduceMotion={reduceMotion} />
 
