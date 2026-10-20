@@ -6,17 +6,22 @@ import { X, Volume2, VolumeX, Play, Trophy, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 
 // Camera targets (play distance computed in CameraRig)
-// IDLE now frames the whole room, not just the arcade cabinet.
+// IDLE frames the whole room; PLAY lerps toward the (shrunken) arcade screen.
 const IDLE_POS = new THREE.Vector3(3.8, 2.2, 5.2);
 const IDLE_LOOK = new THREE.Vector3(0, 0.3, 0);
-const PLAY_LOOK = new THREE.Vector3(0, 0.4, -0.1);
+const PLAY_LOOK = new THREE.Vector3(0, -0.18, -0.07);
 
 // Room geometry constants
 const ROOM = {
   size: 10,         // floor is 10×10 (square room)
   height: 4.5,      // ceiling height
-  floorY: -0.56,    // sits flush under the arcade cabinet's base
+  floorY: -0.56,    // flush with the shrunken cabinet's new base position
 };
+
+// Realistic-scale pass: the cocktail arcade cabinet is tuned at ~0.45× of
+// its original "demo" size so it reads as a bartop/cocktail unit (≈1.4m
+// wide × ~0.9m tall) next to the sofa and pool table.
+const CABINET_SCALE = 0.45;
 
 // ─── Audio ────────────────────────────────────────────────────
 let audioCtx = null;
@@ -527,7 +532,10 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
       group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, 0, 0.1);
       group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, 0, 0.1);
     }
-    const targetScale = hovered && mode === "idle" ? 1.04 : 1;
+    // Hover scale is a tiny multiplier on the realistic base size, so the
+    // cabinet keeps its tuned footprint instead of snapping back to 1.
+    const targetScale =
+      hovered && mode === "idle" ? CABINET_SCALE * 1.04 : CABINET_SCALE;
     const s = group.current.scale.x;
     const next = THREE.MathUtils.lerp(s, targetScale, 0.15);
     group.current.scale.set(next, next, next);
@@ -552,7 +560,10 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
   return (
     <group
       ref={group}
-      position={[0, -0.3, 0]}
+      // Position tuned so the shrunken cabinet base sits flush on the floor.
+      // CABINET_SCALE is applied every frame in useFrame above.
+      position={[0, -0.45, 0]}
+      scale={CABINET_SCALE}
       onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
       onPointerOut={(e) => { e.stopPropagation(); setHovered(false); }}
       onClick={(e) => {
@@ -1238,11 +1249,13 @@ function CameraRig({ mode, reduceMotion }) {
 
   useFrame((_, dt) => {
     const aspect = size.width / Math.max(1, size.height);
+    // Play-mode framing tuned for the realistic 0.45× cabinet — the screen
+    // face sits around (0, -0.18, -0.07), so camera y hovers near that line.
     let z, y;
-    if (aspect >= 1.4) { z = 3.4; y = 0.9; }
-    else if (aspect >= 1.0) { z = 3.8; y = 0.9; }
-    else if (aspect >= 0.7) { z = 4.6; y = 1.0; }
-    else { z = 5.6; y = 1.1; }
+    if (aspect >= 1.4) { z = 1.55; y = 0.0; }
+    else if (aspect >= 1.0) { z = 1.75; y = 0.0; }
+    else if (aspect >= 0.7) { z = 2.15; y = 0.05; }
+    else { z = 2.75; y = 0.1; }
     playTarget.current.set(0, y, z);
 
     const targetPos = (mode === "playing" || mode === "dead") ? playTarget.current : IDLE_POS;
