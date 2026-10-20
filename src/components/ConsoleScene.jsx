@@ -1,7 +1,7 @@
 import { Suspense, useRef, useMemo, useEffect, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Float, ContactShadows, RoundedBox } from "@react-three/drei";
+import { Float, ContactShadows, RoundedBox, OrbitControls } from "@react-three/drei";
 import { X, Volume2, VolumeX, Play, Trophy, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 
@@ -18,7 +18,15 @@ const IDLE_LOOK = new THREE.Vector3(0.2, -0.55, -0.4);
 const CAB_POS = [1.3, -0.56, -2.65];
 const PLAY_LOOK = new THREE.Vector3(CAB_POS[0], CAB_POS[1] + 1.42, CAB_POS[2] + 0.2);
 const IDLE_FOV = 20;
-const PLAY_FOV = 35;
+const PLAY_FOV = 48; // player POV: wider lens, standing close
+// Idle orbit limits (distance / elevation / swing) so visitors can't dive
+// under the plinth or swing round behind the open right/front sides.
+const ORBIT = {
+  minDist: 14, maxDist: 48,
+  minPolar: 0.35, maxPolar: 1.32,
+  azimuth: Math.atan2(IDLE_POS.x - IDLE_LOOK.x, IDLE_POS.z - IDLE_LOOK.z),
+  swing: 0.75,
+};
 
 // Room geometry — big games-room diorama on a floating plinth. Back wall +
 // left wall are solid rounded slabs; the RIGHT wall is a single-sided plane
@@ -689,13 +697,15 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
           <meshStandardMaterial color={bodyDark} roughness={0.55} />
         </RoundedBox>
         {/* Controls — reuse existing stick/button components at half size */}
-        <group position={[0, 0.045, 0.02]} scale={0.5}>
-          <JoyStick position={[-0.42, 0, 0.05]} stickColor={stickColor} accent={accent} />
-          <JoyStick position={[0.42, 0, 0.05]} stickColor={stickColor} accent={accent} />
-          <Button position={[-0.12, 0.03, 0.14]} color="#ff4d4d" />
-          <Button position={[0.08, 0.03, 0.14]} color="#f5c518" />
-          <Button position={[0.28, 0.03, 0.14]} color="#30c764" />
-          <Button position={[0.08, 0.03, -0.06]} color={accent} />
+        {/* 0.3× keeps the ball tops below the screen's bottom edge from the
+            player POV; sticks pushed outboard so they frame the screen */}
+        <group position={[0, 0.045, 0.02]} scale={0.3}>
+          <JoyStick position={[-0.8, 0, 0.1]} stickColor={stickColor} accent={accent} />
+          <JoyStick position={[0.8, 0, 0.1]} stickColor={stickColor} accent={accent} />
+          <Button position={[-0.22, 0.03, 0.26]} color="#ff4d4d" />
+          <Button position={[0.1, 0.03, 0.26]} color="#f5c518" />
+          <Button position={[0.42, 0.03, 0.26]} color="#30c764" />
+          <Button position={[0.1, 0.03, -0.1]} color={accent} />
         </group>
       </group>
 
@@ -708,13 +718,14 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
         />
       </RoundedBox>
       {/* Screen bezel + live game screen, tilted back ~8° */}
-      <group position={[0, 1.42, 0.185]} rotation={[-0.14, 0, 0]}>
+      <group position={[0, 1.47, 0.185]} rotation={[-0.14, 0, 0]}>
         <mesh position={[0, 0, -0.01]}>
-          <boxGeometry args={[0.66, 0.5, 0.02]} />
+          <boxGeometry args={[0.68, 0.4, 0.02]} />
           <meshStandardMaterial color="#050506" roughness={0.3} />
         </mesh>
-        {/* ScreenFace is authored at 1.95×1.0; scale to 0.57×0.29 */}
-        <group position={[0, -0.015, -0.045]} scale={0.29}>
+        {/* ScreenFace is authored at 1.95×1.0; scale to 0.64×0.33 so it
+            fills the bezel with only a thin black rim */}
+        <group position={[0, -0.016, -0.05]} scale={0.33}>
           <ScreenFace mode={mode} flapRef={flapRef} onScore={onScore} onDeath={onDeath} />
         </group>
       </group>
@@ -1540,44 +1551,83 @@ function RoomShell() {
   );
 }
 
-function CameraRig({ mode, reduceMotion }) {
+// Camera owner rules:
+//  - play/dead: CameraRig drives camera to a low player POV in front of the
+//    cabinet (eye just below the screen line, slight upward tilt, control
+//    ledge + joysticks at the bottom of frame).
+//  - idle: CameraRig animates back to IDLE_POS, then hands the camera to
+//    OrbitControls so visitors can rotate / zoom the room.
+function CameraRig({ mode, reduceMotion, controlsRef, onSettled }) {
   const { camera, size } = useThree();
   const look = useRef(new THREE.Vector3().copy(IDLE_LOOK));
   const playTarget = useRef(new THREE.Vector3());
+  const playLook = useRef(new THREE.Vector3());
+  const settled = useRef(true); // idle hand-over done?
+  const prevMode = useRef(mode);
 
   useFrame((_, dt) => {
+    const inGame = mode === "playing" || mode === "dead";
+    if (prevMode.current !== mode) {
+      prevMode.current = mode;
+      settled.current = false;
+      onSettled?.(false);
+      if (inGame && controlsRef.current) {
+        // Start the dolly from wherever the visitor left the orbit camera
+        look.current.copy(controlsRef.current.target);
+      }
+    }
+
     const aspect = size.width / Math.max(1, size.height);
-    // Play-mode framing tuned for the realistic 0.45× cabinet — the screen
-    // face sits around (0, -0.18, -0.07), so camera y hovers near that line.
-    // Dolly in front of the upright cabinet's screen (world ≈ PLAY_LOOK).
-    let dz, dy;
-    if (aspect >= 1.4) { dz = 1.45; dy = 0.05; }
-    else if (aspect >= 1.0) { dz = 1.65; dy = 0.05; }
-    else if (aspect >= 0.7) { dz = 2.0; dy = 0.1; }
-    else { dz = 2.6; dy = 0.15; }
-    playTarget.current.set(PLAY_LOOK.x, PLAY_LOOK.y + dy, PLAY_LOOK.z + dz);
+    // Standing player: eye ~0.3 m below screen centre, looking slightly up
+    // at the screen while the ledge stays in the lower third of the frame.
+    let dz;
+    if (aspect >= 1.4) dz = 1.25;
+    else if (aspect >= 1.0) dz = 1.45;
+    else if (aspect >= 0.7) dz = 1.85;
+    else dz = 2.35;
+    // Standing player at the ledge: eye ~25 cm above screen centre looking
+    // slightly down, so the sticks sit below the screen instead of across it
+    // and the ledge/buttons anchor the bottom of the frame.
+    playTarget.current.set(PLAY_LOOK.x, PLAY_LOOK.y + 0.28, PLAY_LOOK.z + dz);
+    playLook.current.set(PLAY_LOOK.x, PLAY_LOOK.y - 0.02, PLAY_LOOK.z);
 
-    const targetPos = (mode === "playing" || mode === "dead") ? playTarget.current : IDLE_POS;
-    const targetLook = (mode === "playing" || mode === "dead") ? PLAY_LOOK : IDLE_LOOK;
     const t = reduceMotion ? 1 : 0.08;
-    camera.position.lerp(targetPos, t);
-    look.current.lerp(targetLook, t);
+    const targetFov = inGame ? PLAY_FOV : IDLE_FOV;
 
-    // Lens: long/narrow in idle (near-isometric), normal when dollied in to play.
-    const targetFov = (mode === "playing" || mode === "dead") ? PLAY_FOV : IDLE_FOV;
-    const nextFov = THREE.MathUtils.lerp(camera.fov, targetFov, t);
-    if (Math.abs(nextFov - camera.fov) > 0.01) {
-      camera.fov = nextFov;
-      camera.updateProjectionMatrix();
-    }
+    if (inGame || !settled.current) {
+      const targetPos = inGame ? playTarget.current : IDLE_POS;
+      const targetLook = inGame ? playLook.current : IDLE_LOOK;
+      camera.position.lerp(targetPos, t);
+      look.current.lerp(targetLook, t);
 
-    if (shake.amp > 0.001 && !reduceMotion) {
-      const n = performance.now() * 0.07;
-      camera.position.x += Math.sin(n) * shake.amp;
-      camera.position.y += Math.cos(n * 1.3) * shake.amp;
-      shake.amp = Math.max(0, shake.amp - 6 * dt);
+      const nextFov = THREE.MathUtils.lerp(camera.fov, targetFov, t);
+      if (Math.abs(nextFov - camera.fov) > 0.01) {
+        camera.fov = nextFov;
+        camera.updateProjectionMatrix();
+      }
+
+      if (shake.amp > 0.001 && !reduceMotion) {
+        const n = performance.now() * 0.07;
+        camera.position.x += Math.sin(n) * shake.amp;
+        camera.position.y += Math.cos(n * 1.3) * shake.amp;
+        shake.amp = Math.max(0, shake.amp - 6 * dt);
+      }
+      camera.lookAt(look.current);
+
+      // Returned home → snap the last few mm and hand over to OrbitControls.
+      if (!inGame && camera.position.distanceTo(IDLE_POS) < 0.05) {
+        camera.position.copy(IDLE_POS);
+        camera.fov = IDLE_FOV;
+        camera.updateProjectionMatrix();
+        look.current.copy(IDLE_LOOK);
+        if (controlsRef.current) {
+          controlsRef.current.target.copy(IDLE_LOOK);
+          controlsRef.current.update();
+        }
+        settled.current = true;
+        onSettled?.(true);
+      }
     }
-    camera.lookAt(look.current);
   });
   return null;
 }
@@ -1602,6 +1652,8 @@ function addScore(name, score) {
 export default function ConsoleScene() {
   const reduceMotion = useReducedMotion();
   const [mode, setMode] = useState("idle");
+  const controlsRef = useRef(null);
+  const [orbitOn, setOrbitOn] = useState(true); // false while CameraRig animates
   const [score, setScore] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [best, setBest] = useState(() => {
@@ -1701,6 +1753,18 @@ export default function ConsoleScene() {
           // Only flap when clicking on empty canvas during play — joystick/button events stopPropagation
           if (mode === "playing") flap();
         }}
+        onCreated={({ gl }) => {
+          const el = gl.domElement;
+          // One-finger touch keeps scrolling the page; two fingers orbit/pinch.
+          el.style.touchAction = "pan-y";
+          // Plain wheel scrolls the page; ctrl/⌘+wheel (and trackpad pinch,
+          // which browsers report as ctrl+wheel) zooms the room.
+          el.addEventListener(
+            "wheel",
+            (e) => { if (!e.ctrlKey && !e.metaKey) e.stopImmediatePropagation(); },
+            { capture: true, passive: true }
+          );
+        }}
       >
         {inGame && <color attach="background" args={["#0a0d14"]} />}
 
@@ -1733,7 +1797,29 @@ export default function ConsoleScene() {
           {mode !== "playing" && mode !== "dead" && <RoomShell />}
         </Suspense>
 
-        <CameraRig mode={mode} reduceMotion={reduceMotion} />
+        <CameraRig
+          mode={mode}
+          reduceMotion={reduceMotion}
+          controlsRef={controlsRef}
+          onSettled={setOrbitOn}
+        />
+        <OrbitControls
+          ref={controlsRef}
+          enabled={!inGame && orbitOn}
+          target={IDLE_LOOK.toArray()}
+          enablePan={false}
+          enableDamping
+          dampingFactor={0.08}
+          rotateSpeed={0.5}
+          zoomSpeed={0.6}
+          minDistance={ORBIT.minDist}
+          maxDistance={ORBIT.maxDist}
+          minPolarAngle={ORBIT.minPolar}
+          maxPolarAngle={ORBIT.maxPolar}
+          minAzimuthAngle={ORBIT.azimuth - ORBIT.swing}
+          maxAzimuthAngle={ORBIT.azimuth + ORBIT.swing}
+          touches={{ ONE: null, TWO: THREE.TOUCH.DOLLY_ROTATE }}
+        />
 
         <Suspense fallback={null}>
           {/* No Float — a 1.9 m cabinet stands on the floor */}
