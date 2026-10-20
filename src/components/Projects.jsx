@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useRef } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import AnimatedSection, { AnimatedItem } from "./AnimatedSection";
 import ProjectDetail from "./ProjectDetail";
@@ -17,23 +17,57 @@ const cardVariants = {
   }),
 };
 
+// Max tilt in degrees. Small by design — depth cue, not toy.
+const TILT_MAX = 6;
+
 function ProjectCard({ project, index, onOpen }) {
+  const reduceMotion = useReducedMotion();
+  const btnRef = useRef(null);
+
+  function applyTransform(rx, ry, lift, dur, ease) {
+    const el = btnRef.current;
+    if (!el) return;
+    el.style.transition = `transform ${dur}ms ${ease}`;
+    el.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(${lift}px)`;
+  }
+
+  function handleMove(e) {
+    if (reduceMotion) return;
+    const el = btnRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width;
+    const py = (e.clientY - r.top) / r.height;
+    const ry = (px - 0.5) * 2 * TILT_MAX;
+    const rx = (0.5 - py) * 2 * TILT_MAX;
+    applyTransform(rx.toFixed(2), ry.toFixed(2), -3, 120, "ease-out");
+  }
+
+  function handleLeave() {
+    applyTransform(0, 0, 0, 500, "cubic-bezier(0.22, 1, 0.36, 1)");
+  }
+
   return (
-    <motion.button
-      type="button"
-      onClick={onOpen}
+    <motion.div
       custom={index}
       variants={cardVariants}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-60px" }}
-      whileHover={{ y: -3 }}
-      whileTap={{ scale: 0.985 }}
-      transition={{ type: "spring", stiffness: 300, damping: 24 }}
-      className="group text-left h-full overflow-hidden rounded-2xl flex flex-col cursor-pointer transition-[border-color,box-shadow] duration-300 ease-out hover:shadow-[0_12px_40px_rgba(0,113,227,0.08)]"
+      className="h-full"
+    >
+    <button
+      ref={btnRef}
+      type="button"
+      onClick={onOpen}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      className="group text-left w-full h-full overflow-hidden rounded-2xl flex flex-col cursor-pointer hover:shadow-[0_18px_50px_rgba(0,113,227,0.12)] active:scale-[0.985]"
       style={{
         background: "rgba(255,255,255,0.03)",
         border: "1px solid rgba(255,255,255,0.07)",
+        transformStyle: "preserve-3d",
+        willChange: "transform",
       }}
       aria-label={`Open details for ${project.title}`}
     >
@@ -89,7 +123,8 @@ function ProjectCard({ project, index, onOpen }) {
           )}
         </div>
       </div>
-    </motion.button>
+    </button>
+    </motion.div>
   );
 }
 
