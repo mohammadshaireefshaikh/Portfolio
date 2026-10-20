@@ -8,8 +8,8 @@ import { useReducedMotion } from "framer-motion";
 // Camera targets
 const IDLE_POS = new THREE.Vector3(2.5, 2.5, 4);
 const IDLE_LOOK = new THREE.Vector3(0, 0, 0);
-const PLAY_POS = new THREE.Vector3(0, 0.55, 1.55);
-const PLAY_LOOK = new THREE.Vector3(0, 0.5, -0.1);
+const PLAY_POS = new THREE.Vector3(0, 0.75, 2.4);
+const PLAY_LOOK = new THREE.Vector3(0, 0.55, -0.1);
 
 // ─── Audio (Web Audio API, no files) ──────────────────────────
 let audioCtx = null;
