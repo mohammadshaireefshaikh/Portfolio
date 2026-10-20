@@ -13,6 +13,8 @@
     "embed": "node scripts/build-embeddings.js"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
     "@tailwindcss/vite": "^4.3.0",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
@@ -22,7 +24,8 @@
     "openai": "^4.104.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "tailwindcss": "^4.3.0"
+    "tailwindcss": "^4.3.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

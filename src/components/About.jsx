@@ -1,7 +1,26 @@
 import { motion } from "framer-motion";
 import { MapPin, Trophy } from "lucide-react";
 import AnimatedSection, { AnimatedItem } from "./AnimatedSection";
-import { personal, awards, stats } from "../data/portfolio";
+import { personal, awards } from "../data/portfolio";
+
+// Richer metric cards (moved out of Hero's OrbVisual). Horizontal 3-col grid here.
+const METRICS = [
+  {
+    value: "Software Developer",
+    label: "AI-assisted development",
+    context: "Claude · Cursor · GitHub Copilot",
+  },
+  {
+    value: "1st",
+    label: "Google Cloud Hackathon",
+    context: "London Summit · 2025",
+  },
+  {
+    value: "+20%",
+    label: "Showroom engagement",
+    context: "MG · Maruti Suzuki · Jeep",
+  },
+];
 
 export default function About() {
   return (
@@ -32,22 +51,23 @@ export default function About() {
         </AnimatedSection>
 
         <AnimatedSection>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
-            {stats.map((s) => (
-              <AnimatedItem key={s.label}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-12">
+            {METRICS.map((m) => (
+              <AnimatedItem key={m.label}>
                 <motion.div
-                  className="p-5 rounded-2xl text-center"
+                  className="px-5 py-4 rounded-2xl"
                   style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.07)",
+                    background: "#0d0d0d",
+                    border: "1px solid rgba(255,255,255,0.08)",
                   }}
                   whileHover={{ borderColor: "rgba(0,113,227,0.25)" }}
                   transition={{ duration: 0.2 }}
                 >
-                  <p className="text-xl font-bold text-white tabular-nums tracking-tight mb-1">
-                    {s.value}
+                  <p className="text-2xl font-semibold tracking-tight text-white mb-0.5">
+                    {m.value}
                   </p>
-                  <p className="text-xs text-[#555] leading-tight">{s.label}</p>
+                  <p className="text-sm font-medium text-[#f5f5f7]">{m.label}</p>
+                  <p className="text-xs text-[#444] mt-0.5">{m.context}</p>
                 </motion.div>
               </AnimatedItem>
             ))}
