@@ -1,7 +1,147 @@
-import { Suspense, useRef } from "react";
+import { Suspense, useRef, useMemo, useEffect } from "react";
+import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Float, Environment, ContactShadows } from "@react-three/drei";
 import { useReducedMotion } from "framer-motion";
+
+/**
+ * Returns a THREE.CanvasTexture that an auto-playing Flappy demo paints
+ * into on every tick. Updated texture is applied to the console screen.
+ */
+function useFlappyDemoTexture() {
+  const texture = useMemo(() => {
+    // Screen aspect 1.95:1.0 → render target 390x200
+    const canvas = document.createElement("canvas");
+    canvas.width = 390;
+    canvas.height = 200;
+    const t = new THREE.CanvasTexture(canvas);
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, []);
+
+  const stateRef = useRef({
+    canvas: texture.image,
+    bird: { x: 70, y: 100, vy: 0, r: 8 },
+    pipes: [],
+    t: 0,
+    spawn: 0,
+    score: 0,
+  });
+
+  // Reset game helper
+  function reset() {
+    const s = stateRef.current;
+    s.bird.x = 70;
+    s.bird.y = 100;
+    s.bird.vy = 0;
+    s.pipes = [];
+    s.spawn = 0;
+    s.score = 0;
+  }
+
+  useFrame((_, dt) => {
+    const s = stateRef.current;
+    s.t += dt;
+    const W = s.canvas.width;
+    const H = s.canvas.height;
+    const GAP = 70;
+    const PIPE_W = 32;
+    const SPEED = 70; // px/s
+    const G = 420;
+    const FLAP = -170;
+
+    // ─ simple AI: flap when bird falls below next-pipe gap centre ─
+    const nextPipe = s.pipes.find((p) => p.x + PIPE_W > s.bird.x);
+    const target = nextPipe ? nextPipe.gapY + GAP / 2 - 6 : H / 2;
+    if (s.bird.y > target && s.bird.vy > FLAP * 0.4) s.bird.vy = FLAP;
+
+    // Physics
+    s.bird.vy += G * dt;
+    s.bird.y += s.bird.vy * dt;
+
+    // Spawn pipes
+    s.spawn += dt;
+    if (s.spawn > 1.3) {
+      s.spawn = 0;
+      const margin = 25;
+      const gapY =
+        margin + Math.random() * (H - 2 * margin - GAP);
+      s.pipes.push({ x: W + 10, gapY, scored: false });
+    }
+
+    // Move + prune pipes
+    for (const p of s.pipes) p.x -= SPEED * dt;
+    s.pipes = s.pipes.filter((p) => p.x + PIPE_W > -10);
+
+    // Collisions / score
+    for (const p of s.pipes) {
+      const inX =
+        s.bird.x + s.bird.r > p.x && s.bird.x - s.bird.r < p.x + PIPE_W;
+      if (inX) {
+        if (
+          s.bird.y - s.bird.r < p.gapY ||
+          s.bird.y + s.bird.r > p.gapY + GAP
+        ) {
+          reset();
+          return;
+        }
+      }
+      if (!p.scored && p.x + PIPE_W < s.bird.x - s.bird.r) {
+        p.scored = true;
+        s.score++;
+      }
+    }
+    if (s.bird.y < 0 || s.bird.y > H) reset();
+
+    // ─ Draw ─
+    const ctx = s.canvas.getContext("2d");
+    // Background
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#050508");
+    g.addColorStop(1, "#0a1324");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // Pipes
+    ctx.fillStyle = "#0071e3";
+    for (const p of s.pipes) {
+      ctx.fillRect(p.x, 0, PIPE_W, p.gapY);
+      ctx.fillRect(p.x, p.gapY + GAP, PIPE_W, H - p.gapY - GAP);
+      ctx.fillStyle = "#2997ff";
+      ctx.fillRect(p.x - 2, p.gapY - 8, PIPE_W + 4, 8);
+      ctx.fillRect(p.x - 2, p.gapY + GAP, PIPE_W + 4, 8);
+      ctx.fillStyle = "#0071e3";
+    }
+
+    // Bird
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(s.bird.x, s.bird.y, s.bird.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#f5c518";
+    ctx.beginPath();
+    ctx.moveTo(s.bird.x + s.bird.r - 2, s.bird.y - 1);
+    ctx.lineTo(s.bird.x + s.bird.r + 5, s.bird.y + 1);
+    ctx.lineTo(s.bird.x + s.bird.r - 2, s.bird.y + 3);
+    ctx.closePath();
+    ctx.fill();
+
+    // Score — big and faint
+    ctx.fillStyle = "rgba(255,255,255,0.22)";
+    ctx.font = "bold 56px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(String(s.score), W / 2, H / 2 + 20);
+
+    texture.needsUpdate = true;
+  });
+
+  // Dispose on unmount
+  useEffect(() => () => texture.dispose(), [texture]);
+
+  return texture;
+}
 
 /**
  * Low-poly retro console: base, raised screen, two joysticks, four buttons.
@@ -57,16 +197,8 @@ function Console({ reduceMotion }) {
           <boxGeometry args={[2.1, 1.15, 0.05]} />
           <meshStandardMaterial color="#050506" roughness={0.3} />
         </mesh>
-        {/* Glowing screen face */}
-        <mesh position={[0, 0.05, 0.19]}>
-          <planeGeometry args={[1.95, 1.0]} />
-          <meshStandardMaterial
-            color={accent}
-            emissive={accent}
-            emissiveIntensity={0.9}
-            toneMapped={false}
-          />
-        </mesh>
+        {/* Live Flappy demo as the screen face */}
+        <ScreenFace />
       </group>
 
       {/* Point light inside screen for cast glow */}
@@ -89,6 +221,22 @@ function Console({ reduceMotion }) {
       <Button position={[0.25, 0.26, 0.75]} color="#30c764" />
       <Button position={[0, 0.26, 0.5]} color={accent} />
     </group>
+  );
+}
+
+function ScreenFace() {
+  const tex = useFlappyDemoTexture();
+  return (
+    <mesh position={[0, 0.05, 0.19]}>
+      <planeGeometry args={[1.95, 1.0]} />
+      <meshStandardMaterial
+        map={tex}
+        emissive="#0071e3"
+        emissiveIntensity={0.25}
+        emissiveMap={tex}
+        toneMapped={false}
+      />
+    </mesh>
   );
 }
 

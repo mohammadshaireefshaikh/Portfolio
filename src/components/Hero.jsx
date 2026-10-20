@@ -128,6 +128,17 @@ export default function Hero() {
               {personal.email}
             </a>
           </motion.div>
+
+          <motion.div variants={itemVariants} className="mt-5 md:text-left text-center">
+            <a
+              href="/flappy.html"
+              className="inline-flex items-center gap-2 text-xs text-[#555] hover:text-[#2997ff] transition-colors duration-200"
+              aria-label="Play Flappy — the game running on the console"
+            >
+              <span>↑</span>
+              <span>That console runs Flappy — play it →</span>
+            </a>
+          </motion.div>
         </motion.div>
       </div>
 
