@@ -1,7 +1,7 @@
 import { Suspense, useRef, useMemo, useEffect, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Float, Environment, ContactShadows } from "@react-three/drei";
+import { Float, Environment, ContactShadows, useTexture } from "@react-three/drei";
 import { X, Volume2, VolumeX, Play, Trophy, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 
@@ -1044,53 +1044,62 @@ function HotWheelsShelf({ wallX, y = 1.3 }) {
   );
 }
 
-function OnePiecePoster({ x = -2.2, y = 1.4 }) {
-  const bgRed = "#8a1818";
-  const bone = "#f0ead6";
-  const gold = "#f5c518";
+// 5-panel multi-piece wall art (step layout). Loads a single image and
+// slices it horizontally across 5 vertical frames with step heights
+// (short-tall-tallest-tall-short), matching the classic multi-panel
+// canvas format.
+function MultiPanelWallArt({ x = 0, y = 1.6, texturePath = "/img/zoro-wallart.jpg" }) {
+  const base = useTexture(`${import.meta.env.BASE_URL}${texturePath.replace(/^\//, "")}`);
+
+  const panelCount = 5;
+  const panelWidth = 0.42;
+  const gap = 0.05;
+  const stepHeights = [0.75, 1.1, 1.4, 1.1, 0.75]; // short → tall → short
+
+  // One cloned texture per panel, each showing a 1/5 vertical strip
+  const slices = useMemo(() => {
+    const arr = [];
+    for (let i = 0; i < panelCount; i++) {
+      const t = base.clone();
+      t.needsUpdate = true;
+      t.wrapS = THREE.ClampToEdgeWrapping;
+      t.wrapT = THREE.ClampToEdgeWrapping;
+      t.repeat.set(1 / panelCount, 1);
+      t.offset.set(i / panelCount, 0);
+      t.colorSpace = THREE.SRGBColorSpace;
+      arr.push(t);
+    }
+    return arr;
+  }, [base]);
+
   return (
     <group position={[x, y, -ROOM.size / 2 + 0.03]}>
-      {/* Frame */}
-      <mesh castShadow>
-        <boxGeometry args={[1.9, 2.6, 0.06]} />
-        <meshStandardMaterial color="#1a1510" roughness={0.6} />
-      </mesh>
-      {/* Poster face */}
-      <mesh position={[0, 0, 0.04]}>
-        <planeGeometry args={[1.75, 2.45]} />
-        <meshStandardMaterial color={bgRed} roughness={0.95} />
-      </mesh>
-      {/* Skull */}
-      <mesh position={[0, 0.35, 0.05]}>
-        <circleGeometry args={[0.4, 32]} />
-        <meshStandardMaterial color={bone} roughness={0.85} />
-      </mesh>
-      {/* Hat brim */}
-      <mesh position={[0, 0.82, 0.05]}>
-        <boxGeometry args={[1.0, 0.1, 0.004]} />
-        <meshStandardMaterial color={gold} />
-      </mesh>
-      {/* Hat crown */}
-      <mesh position={[0, 0.92, 0.05]}>
-        <boxGeometry args={[0.45, 0.1, 0.004]} />
-        <meshStandardMaterial color={gold} />
-      </mesh>
-      {/* Crossbones */}
-      <mesh position={[0, 0, 0.05]} rotation={[0, 0, Math.PI / 4]}>
-        <boxGeometry args={[1.05, 0.11, 0.003]} />
-        <meshStandardMaterial color={bone} />
-      </mesh>
-      <mesh position={[0, 0, 0.05]} rotation={[0, 0, -Math.PI / 4]}>
-        <boxGeometry args={[1.05, 0.11, 0.003]} />
-        <meshStandardMaterial color={bone} />
-      </mesh>
-      {/* Title bar */}
-      <mesh position={[0, -0.95, 0.05]}>
-        <boxGeometry args={[1.5, 0.32, 0.003]} />
-        <meshStandardMaterial color={gold} />
-      </mesh>
-      {/* Spotlight — picks the poster out of the room */}
-      <pointLight position={[0, 1.5, 0.8]} color="#ffcf90" intensity={0.6} distance={4} decay={2} />
+      {stepHeights.map((h, i) => {
+        const panelX = (i - (panelCount - 1) / 2) * (panelWidth + gap);
+        return (
+          <group key={i} position={[panelX, 0, 0]}>
+            {/* Thin dark frame */}
+            <mesh castShadow>
+              <boxGeometry args={[panelWidth, h, 0.03]} />
+              <meshStandardMaterial color="#0a0a0e" roughness={0.6} />
+            </mesh>
+            {/* Image slice */}
+            <mesh position={[0, 0, 0.019]}>
+              <planeGeometry args={[panelWidth * 0.96, h * 0.96]} />
+              <meshStandardMaterial
+                map={slices[i]}
+                emissive="#ffffff"
+                emissiveMap={slices[i]}
+                emissiveIntensity={0.15}
+                roughness={0.9}
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+      {/* Picture spotlight */}
+      <pointLight position={[0, 1.3, 0.8]} color="#ffcf90" intensity={0.7} distance={4.5} decay={2} />
     </group>
   );
 }
@@ -1195,7 +1204,10 @@ function RoomShell() {
       <PoolTable position={[-3.2, floorY, 1.4]} rotation={[0, 0.25, 0]} />
       <Sofa position={[3.0, floorY, 1.3]} rotation={[0, -Math.PI / 3, 0]} />
       <HotWheelsShelf wallX={half - 0.02} y={1.4} />
-      <OnePiecePoster x={2.2} y={1.4} />
+      {/* 5-panel wall art — centred on back wall above the arcade */}
+      <Suspense fallback={null}>
+        <MultiPanelWallArt x={0} y={2.3} />
+      </Suspense>
 
       {/* ─── Phase 3 furniture ─── */}
       {/* 3 corner floor speakers (per sketch) */}
