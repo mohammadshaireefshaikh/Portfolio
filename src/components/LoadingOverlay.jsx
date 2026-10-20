@@ -32,8 +32,12 @@ export default function LoadingOverlay({ onEnter }) {
   }, []);
 
   function enter() {
+    // ConsoleScene listens: rumble + quake + rock-slab reveal start now,
+    // under the overlay fade, so the room is already moving when it clears.
+    window.dispatchEvent(new CustomEvent("room-enter"));
     setVisible(false);
-    setTimeout(() => onEnter?.(), 650);
+    // Hero text follows once the lower slabs have cleared the plinth.
+    setTimeout(() => onEnter?.(), 1500);
   }
 
   return (

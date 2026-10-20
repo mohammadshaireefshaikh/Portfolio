@@ -123,6 +123,58 @@ const sfx = {
   },
 };
 
+// ENTER THE ROOM — "something big sliding": brown-noise rumble swept through a
+// lowpass, a sub-bass drop, and a handful of ice crackles. ~2.6 s, no files.
+function rumble() {
+  const a = ctx();
+  if (!a || muted) return;
+  const dur = 2.6;
+  const t0 = a.currentTime;
+  const n = Math.floor(a.sampleRate * dur);
+  const buf = a.createBuffer(1, n, a.sampleRate);
+  const d = buf.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < n; i++) {
+    const w = Math.random() * 2 - 1;
+    last = (last + 0.02 * w) / 1.02; // brown noise
+    d[i] = last * 3.5;
+  }
+  const src = a.createBufferSource();
+  src.buffer = buf;
+  const lp = a.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.Q.value = 1.2;
+  lp.frequency.setValueAtTime(70, t0);
+  lp.frequency.exponentialRampToValueAtTime(520, t0 + 0.9);
+  lp.frequency.exponentialRampToValueAtTime(45, t0 + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.55, t0 + 0.35);
+  g.gain.setValueAtTime(0.55, t0 + 1.1);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(lp).connect(g).connect(a.destination);
+  src.start(t0);
+
+  // Sub drop under the slide
+  const sub = a.createOscillator();
+  sub.type = "sine";
+  sub.frequency.setValueAtTime(52, t0);
+  sub.frequency.exponentialRampToValueAtTime(26, t0 + dur);
+  const sg = a.createGain();
+  sg.gain.setValueAtTime(0.0001, t0);
+  sg.gain.exponentialRampToValueAtTime(0.35, t0 + 0.3);
+  sg.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  sub.connect(sg).connect(a.destination);
+  sub.start(t0);
+  sub.stop(t0 + dur);
+
+  // Ice crackles while the slabs let go
+  for (let i = 0; i < 7; i++) {
+    const at = 250 + Math.random() * 1500;
+    setTimeout(() => noise(0.06 + Math.random() * 0.05, 0.14, 2600, 500), at);
+  }
+}
+
 // Sci-fi arpeggio drone — synth background music, no files
 function startMusic() {
   const a = ctx();
@@ -206,6 +258,122 @@ function stopMusic() {
 
 // ─── Shake state ──────────────────────────────────────────────
 const shake = { amp: 0 };
+// Room quake on ENTER (moves the world, not the camera — OrbitControls owns
+// the camera in idle and would fight a camera offset).
+const quake = { amp: 0 };
+
+function Quake({ children }) {
+  const ref = useRef(null);
+  useFrame((_, dt) => {
+    if (!ref.current) return;
+    if (quake.amp > 0.0005) {
+      const n = performance.now() * 0.05;
+      ref.current.position.set(
+        Math.sin(n) * quake.amp,
+        Math.cos(n * 1.37) * quake.amp * 0.5,
+        Math.sin(n * 0.83) * quake.amp * 0.7
+      );
+      quake.amp *= Math.exp(-1.6 * dt);
+    } else if (ref.current.position.lengthSq() > 0) {
+      ref.current.position.set(0, 0, 0);
+    }
+  });
+  return <group ref={ref}>{children}</group>;
+}
+
+// ─── Rock-slab reveal (igloo.inc-style instanced shards) ─────────────
+// A wall of charcoal slabs fills the idle camera's view at a plane in front
+// of the room. On ENTER each slab lets go bottom-first with a little random
+// stagger, falls, slides sideways, tumbles and shrinks away.
+const ROCK_ROWS = 10;
+function RockReveal({ startedAt, onDone }) {
+  const { size } = useThree();
+  const mesh = useRef(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const done = useRef(false);
+
+  const data = useMemo(() => {
+    const dist = IDLE_POS.distanceTo(IDLE_LOOK) - 6;
+    const fov = getRoomFov(size.width, size.height);
+    const halfH = dist * Math.tan(THREE.MathUtils.degToRad(fov / 2)) * 1.15;
+    const halfW = halfH * (size.width / Math.max(1, size.height)) * 1.1;
+    const cell = (2 * halfH) / ROCK_ROWS;
+    const cols = Math.ceil((2 * halfW) / cell) + 1;
+    // PerspectiveCamera, not Object3D: only cameras look down -Z.
+    const cam = new THREE.PerspectiveCamera();
+    cam.position.copy(IDLE_POS);
+    cam.lookAt(IDLE_LOOK);
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
+    const center = IDLE_POS.clone().addScaledVector(fwd, dist);
+    const items = [];
+    for (let r = 0; r < ROCK_ROWS; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = (c - (cols - 1) / 2) * cell;
+        const y = (r - (ROCK_ROWS - 1) / 2) * cell;
+        items.push({
+          rest: center.clone().addScaledVector(right, x).addScaledVector(up, y),
+          delay: (r / ROCK_ROWS) * 0.9 + Math.random() * 0.3,
+          driftX: (Math.random() - 0.5) * 2.4,
+          spin: (Math.random() - 0.5) * 3,
+          seed: Math.random() * Math.PI * 2,
+          depth: 0.6 + Math.random() * 0.5,
+        });
+      }
+    }
+    return { items, cell, right, fwd, up, cam };
+  }, [size.width, size.height]);
+
+  // Per-instance shade so the wall reads as rock, not a flat grid
+  useEffect(() => {
+    if (!mesh.current) return;
+    const col = new THREE.Color();
+    data.items.forEach((_, i) => {
+      col.setHSL(0.6, 0.06, 0.13 + Math.random() * 0.08);
+      mesh.current.setColorAt(i, col);
+    });
+    mesh.current.instanceColor.needsUpdate = true;
+  }, [data]);
+
+  useFrame(() => {
+    if (!mesh.current || done.current) return;
+    const now = performance.now();
+    let allGone = startedAt != null;
+    data.items.forEach((it, i) => {
+      const t = startedAt == null ? -1 : (now - startedAt) / 1000 - it.delay;
+      dummy.position.copy(it.rest);
+      dummy.quaternion.copy(data.cam.quaternion);
+      let s = 1;
+      if (t > 0) {
+        // fall + sideways slide + tumble, then shrink out
+        dummy.position.addScaledVector(data.up, -4.9 * t * t);
+        dummy.position.addScaledVector(data.right, it.driftX * t);
+        dummy.position.addScaledVector(data.fwd, -1.5 * t);
+        dummy.rotateX(it.spin * t);
+        dummy.rotateZ(it.spin * 0.6 * t + it.seed * 0.02);
+        s = THREE.MathUtils.clamp(1 - (t - 0.9) * 1.6, 0, 1);
+        if (s > 0) allGone = false;
+      } else {
+        allGone = false;
+        // sleeping wall breathes very slightly with the quake
+        dummy.position.addScaledVector(data.fwd, Math.sin(now * 0.002 + it.seed) * 0.02);
+      }
+      dummy.scale.set(s, s, s * it.depth);
+      dummy.updateMatrix();
+      mesh.current.setMatrixAt(i, dummy.matrix);
+    });
+    mesh.current.instanceMatrix.needsUpdate = true;
+    if (allGone) { done.current = true; onDone?.(); }
+  });
+
+  return (
+    <instancedMesh ref={mesh} args={[null, null, data.items.length]} frustumCulled={false} castShadow>
+      <boxGeometry args={[data.cell * 0.97, data.cell * 0.97, data.cell * 0.5]} />
+      <meshStandardMaterial color="#ffffff" roughness={0.95} metalness={0.02} flatShading />
+    </instancedMesh>
+  );
+}
 
 // ─── Pixel bat sprite (2 frames) ──────────────────────────────
 const BAT_FRAMES = [
@@ -604,7 +772,7 @@ function Button({ position, color }) {
   );
 }
 
-function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
+function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath, showSign = true }) {
   const group = useRef(null);
   const screenGlow = useRef(null);
   const [hovered, setHovered] = useState(false);
@@ -666,7 +834,7 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
       onPointerOut={(e) => { e.stopPropagation(); setHovered(false); }}
       onClick={startGame}
     >
-      {mode === "idle" && !hasPlayed && (
+      {mode === "idle" && !hasPlayed && showSign && (
         <Html position={[0, 2.34, 0]} center calculatePosition={getArcadeSignPosition} zIndexRange={[20, 0]}>
           {/* pointerup + touch-action:manipulation: phones sometimes never
               deliver `click` here (scroll-intent heuristics, 300 ms delay);
@@ -1669,6 +1837,21 @@ export default function ConsoleScene() {
   const [mode, setMode] = useState("idle");
   const controlsRef = useRef(null);
   const [orbitOn, setOrbitOn] = useState(true); // false while CameraRig animates
+
+  // ENTER THE ROOM intro: LoadingOverlay fires 'room-enter' on the click.
+  const [introAt, setIntroAt] = useState(null);   // timestamp slabs let go
+  const [introDone, setIntroDone] = useState(false);
+  useEffect(() => {
+    const onEnter = () => {
+      rumble();
+      if (reduceMotion) { setIntroDone(true); return; }
+      // overlay fades for ~0.6 s; let the first slabs drop as it clears
+      setIntroAt(performance.now() + 250);
+      setTimeout(() => { quake.amp = 0.22; }, 250);
+    };
+    window.addEventListener("room-enter", onEnter);
+    return () => window.removeEventListener("room-enter", onEnter);
+  }, [reduceMotion]);
   const [score, setScore] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [best, setBest] = useState(() => {
@@ -1806,9 +1989,14 @@ export default function ConsoleScene() {
         <directionalLight position={[0, 9, -6]} intensity={1.5} color="#fff4e0" />
 
         {/* Phase 1 — room shell only. Fades out while the game is in play */}
-        <Suspense fallback={null}>
-          {mode !== "playing" && mode !== "dead" && <RoomShell />}
-        </Suspense>
+        <Quake>
+          <Suspense fallback={null}>
+            {mode !== "playing" && mode !== "dead" && <RoomShell />}
+          </Suspense>
+        </Quake>
+        {!introDone && !inGame && (
+          <RockReveal startedAt={introAt} onDone={() => setIntroDone(true)} />
+        )}
 
         <CameraRig
           mode={mode}
@@ -1846,6 +2034,7 @@ export default function ConsoleScene() {
             flapRef={flapRef}
             onScore={setScore}
             onDeath={onDeath}
+            showSign={introDone}
           />
           <ContactShadows
             position={[0, ROOM.floorY + 0.01, 0]}
