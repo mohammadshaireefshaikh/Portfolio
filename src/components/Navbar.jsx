@@ -15,7 +15,15 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [gameActive, setGameActive] = useState(false);
   const reduceMotion = useReducedMotion();
+
+  // Hide navbar while the console game is in play mode
+  useEffect(() => {
+    const onMode = (e) => setGameActive(e.detail === "playing");
+    window.addEventListener("game-mode", onMode);
+    return () => window.removeEventListener("game-mode", onMode);
+  }, []);
 
   // Refs for liquid-selector geometry (mirrors the vanilla-JS version)
   const navContainerRef = useRef(null);
@@ -108,8 +116,12 @@ export default function Navbar() {
     <>
       <motion.header
         initial={{ y: reduceMotion ? 0 : -80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        animate={{
+          y: gameActive ? -80 : 0,
+          opacity: gameActive ? 0 : 1,
+          pointerEvents: gameActive ? "none" : "auto",
+        }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl"
       >
         {/* ── Desktop liquid pill ─────────────────────────── */}

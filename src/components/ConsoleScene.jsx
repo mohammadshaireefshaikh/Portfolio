@@ -557,6 +557,11 @@ export default function ConsoleScene() {
     }
   }, [mode]);
 
+  // Broadcast game mode so Navbar + other chrome can hide themselves
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("game-mode", { detail: mode }));
+  }, [mode]);
+
   const containerClass =
     mode === "playing" ? "fixed inset-0 z-50" : "relative w-full h-full";
 
