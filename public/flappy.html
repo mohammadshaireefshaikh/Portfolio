@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Flappy · Mohammad Shaikh</title>
+  <meta name="description" content="A tiny arcade break. Flap to survive." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #000;
+      --fg: #f5f5f7;
+      --dim: #86868b;
+      --accent: #0071e3;
+      --accent-glow: rgba(0, 113, 227, 0.4);
+      --panel: #0d0d0d;
+      --line: rgba(255, 255, 255, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      user-select: none;
+    }
+    .top-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 20px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .top-bar a {
+      pointer-events: auto;
+      color: var(--dim);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 200ms ease-out;
+    }
+    .top-bar a:hover { color: var(--fg); }
+    .brand {
+      font-weight: 700;
+      color: var(--fg);
+      letter-spacing: -0.02em;
+      text-transform: none;
+      font-size: 15px;
+    }
+    .brand span { color: var(--accent); }
+    .stage {
+      position: relative;
+      width: min(100%, 420px);
+      aspect-ratio: 9 / 16;
+      max-height: calc(100dvh - 48px);
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 113, 227, 0.06);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    .hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+    }
+    .score {
+      font-weight: 700;
+      font-size: 56px;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: #fff;
+      text-shadow: 0 2px 24px rgba(0, 0, 0, 0.6);
+      text-align: center;
+    }
+    .best {
+      text-align: center;
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      padding: 32px;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.55) 100%);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      pointer-events: auto;
+    }
+    .overlay[hidden] { display: none; }
+    .overlay h1 {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+    }
+    .overlay .sub {
+      font-size: 13px;
+      color: var(--dim);
+      max-width: 240px;
+      line-height: 1.5;
+    }
+    .result {
+      display: flex;
+      gap: 18px;
+      padding: 14px 20px;
+      border-radius: 16px;
+      background: #0a0a0a;
+      border: 1px solid var(--line);
+    }
+    .result div { text-align: center; }
+    .result .label {
+      font-size: 10px;
+      color: var(--dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .result .value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    .result .value.accent { color: var(--accent); }
+    button.play {
+      appearance: none;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-family: inherit;
+      font-weight: 500;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+      padding: 12px 28px;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px var(--accent-glow);
+      transition: transform 150ms ease-out, background-color 150ms ease-out;
+    }
+    button.play:hover { background: #0077ed; }
+    button.play:active { transform: scale(0.97); }
+    .hint {
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    @media (max-height: 640px) {
+      .score { font-size: 42px; }
+      .overlay h1 { font-size: 28px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button.play { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a class="brand" href="/">Mohammad<span>.</span></a>
+    <a href="/">← Back</a>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="game" width="360" height="640" aria-label="Flappy game"></canvas>
+    <div class="hud">
+      <div>
+        <div class="score" id="score" aria-live="polite">0</div>
+        <div class="best" id="bestLabel">BEST — 0</div>
+      </div>
+      <div></div>
+    </div>
+
+    <div class="overlay" id="startOverlay">
+      <h1>Flap to fly.<br/>Don't crash.</h1>
+      <p class="sub">Tap, click, or press Space.</p>
+      <button class="play" id="startBtn">Start</button>
+      <p class="hint">Space / Click / Tap</p>
+    </div>
+
+    <div class="overlay" id="gameOverOverlay" hidden>
+      <h1>Game over.</h1>
+      <div class="result">
+        <div>
+          <div class="label">Score</div>
+          <div class="value accent" id="finalScore">0</div>
+        </div>
+        <div>
+          <div class="label">Best</div>
+          <div class="value" id="finalBest">0</div>
+        </div>
+      </div>
+      <button class="play" id="restartBtn">Play again</button>
+      <p class="hint">Space / Click / Tap</p>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const bestLabelEl = document.getElementById('bestLabel');
+    const startOverlay = document.getElementById('startOverlay');
+    const gameOverOverlay = document.getElementById('gameOverOverlay');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const finalScoreEl = document.getElementById('finalScore');
+    const finalBestEl = document.getElementById('finalBest');
+
+    const BASE_W = 360, BASE_H = 640;
+    const GROUND_H = 60;
+
+    // Match canvas pixel size to CSS size (handles high-DPI)
+    function fitCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      state.cssW = rect.width;
+      state.cssH = rect.height;
+      // Scale factor so game constants (designed in BASE_H) stay feel-correct
+      state.scale = rect.height / BASE_H;
+    }
+
+    let best = 0;
+    try { best = parseInt(localStorage.getItem('flappy.best') || '0', 10) || 0; } catch {}
+    bestLabelEl.textContent = `BEST — ${best}`;
+
+    const state = {
+      mode: 'ready',        // 'ready' | 'playing' | 'dead'
+      cssW: BASE_W,
+      cssH: BASE_H,
+      scale: 1,
+      bird: { x: 90, y: 240, vy: 0, r: 12, rot: 0 },
+      pipes: [],
+      spawnTimer: 0,
+      score: 0,
+      t: 0,
+    };
+
+    const CFG = {
+      gravity: 1600,          // px/s^2
+      flap: -430,             // px/s
+      pipeSpeed: 165,         // px/s
+      pipeGap: 150,
+      pipeInterval: 1.5,      // seconds
+      pipeWidth: 56,
+    };
+
+    function reset() {
+      state.mode = 'ready';
+      state.bird.x = state.cssW * 0.28;
+      state.bird.y = state.cssH / 2;
+      state.bird.vy = 0;
+      state.bird.rot = 0;
+      state.pipes = [];
+      state.spawnTimer = 0;
+      state.score = 0;
+      scoreEl.textContent = '0';
+      startOverlay.hidden = false;
+      gameOverOverlay.hidden = true;
+    }
+
+    function start() {
+      state.mode = 'playing';
+      state.bird.vy = CFG.flap;
+      startOverlay.hidden = true;
+      gameOverOverlay.hidden = true;
+    }
+
+    function flap() {
+      if (state.mode === 'ready') { start(); return; }
+      if (state.mode === 'playing') { state.bird.vy = CFG.flap; }
+      // 'dead' needs explicit restart button
+    }
+
+    function die() {
+      state.mode = 'dead';
+      if (state.score > best) {
+        best = state.score;
+        try { localStorage.setItem('flappy.best', String(best)); } catch {}
+      }
+      bestLabelEl.textContent = `BEST — ${best}`;
+      finalScoreEl.textContent = state.score;
+      finalBestEl.textContent = best;
+      gameOverOverlay.hidden = false;
+    }
+
+    function spawnPipe() {
+      const margin = 70;
+      const minY = margin;
+      const maxY = state.cssH - GROUND_H - margin - CFG.pipeGap;
+      const gapY = Math.random() * (maxY - minY) + minY;
+      state.pipes.push({ x: state.cssW + 20, gapY, scored: false });
+    }
+
+    function update(dt) {
+      if (state.mode !== 'playing') return;
+
+      // Bird physics
+      state.bird.vy += CFG.gravity * dt;
+      state.bird.y += state.bird.vy * dt;
+      state.bird.rot = Math.max(-0.5, Math.min(1.2, state.bird.vy / 500));
+
+      // Floor / ceiling
+      if (state.bird.y + state.bird.r >= state.cssH - GROUND_H) {
+        state.bird.y = state.cssH - GROUND_H - state.bird.r;
+        die();
+        return;
+      }
+      if (state.bird.y - state.bird.r <= 0) {
+        state.bird.y = state.bird.r;
+        state.bird.vy = 0;
+      }
+
+      // Pipes
+      state.spawnTimer += dt;
+      if (state.spawnTimer >= CFG.pipeInterval) {
+        state.spawnTimer = 0;
+        spawnPipe();
+      }
+      for (const p of state.pipes) p.x -= CFG.pipeSpeed * dt;
+      state.pipes = state.pipes.filter(p => p.x + CFG.pipeWidth > -20);
+
+      // Collisions + scoring
+      for (const p of state.pipes) {
+        const inX =
+          state.bird.x + state.bird.r > p.x &&
+          state.bird.x - state.bird.r < p.x + CFG.pipeWidth;
+        if (inX) {
+          const topHit = state.bird.y - state.bird.r < p.gapY;
+          const bottomHit = state.bird.y + state.bird.r > p.gapY + CFG.pipeGap;
+          if (topHit || bottomHit) { die(); return; }
+        }
+        if (!p.scored && p.x + CFG.pipeWidth < state.bird.x - state.bird.r) {
+          p.scored = true;
+          state.score += 1;
+          scoreEl.textContent = state.score;
+        }
+      }
+    }
+
+    function drawBg() {
+      // Deep gradient sky
+      const g = ctx.createLinearGradient(0, 0, 0, state.cssH);
+      g.addColorStop(0, '#050508');
+      g.addColorStop(1, '#0a1324');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, state.cssW, state.cssH);
+
+      // Subtle star dots (deterministic positions via sine)
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      for (let i = 0; i < 30; i++) {
+        const x = ((i * 97) % state.cssW);
+        const y = ((i * 53) % (state.cssH - GROUND_H - 20));
+        ctx.fillRect(x, y, 1.2, 1.2);
+      }
+    }
+
+    function drawPipe(p) {
+      const w = CFG.pipeWidth;
+      const topH = p.gapY;
+      const bottomY = p.gapY + CFG.pipeGap;
+      const bottomH = state.cssH - GROUND_H - bottomY;
+
+      // Pipe body
+      ctx.fillStyle = '#0071e3';
+      ctx.fillRect(p.x, 0, w, topH);
+      ctx.fillRect(p.x, bottomY, w, bottomH);
+
+      // Inner shadow (right edge darker)
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(p.x + w - 6, 0, 6, topH);
+      ctx.fillRect(p.x + w - 6, bottomY, 6, bottomH);
+
+      // Caps
+      ctx.fillStyle = '#2997ff';
+      ctx.fillRect(p.x - 3, topH - 14, w + 6, 14);
+      ctx.fillRect(p.x - 3, bottomY, w + 6, 14);
+    }
+
+    function drawGround() {
+      const y = state.cssH - GROUND_H;
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, y, state.cssW, GROUND_H);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fillRect(0, y, state.cssW, 1);
+      // Diagonal stripes
+      ctx.fillStyle = 'rgba(0,113,227,0.08)';
+      const offset = (state.t * CFG.pipeSpeed) % 24;
+      for (let x = -offset - 24; x < state.cssW; x += 24) {
+        ctx.beginPath();
+        ctx.moveTo(x, state.cssH - 10);
+        ctx.lineTo(x + 10, state.cssH - 10);
+        ctx.lineTo(x + 20, state.cssH);
+        ctx.lineTo(x + 10, state.cssH);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    function drawBird() {
+      const b = state.bird;
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.rot);
+      // Glow
+      ctx.shadowColor = 'rgba(0,113,227,0.6)';
+      ctx.shadowBlur = 18;
+      // Body
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(0, 0, b.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      // Beak
+      ctx.fillStyle = '#f5c518';
+      ctx.beginPath();
+      ctx.moveTo(b.r - 2, -2);
+      ctx.lineTo(b.r + 8, 0);
+      ctx.lineTo(b.r - 2, 4);
+      ctx.closePath();
+      ctx.fill();
+      // Eye
+      ctx.fillStyle = '#0a0a0a';
+      ctx.beginPath();
+      ctx.arc(3, -3, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function render() {
+      drawBg();
+      for (const p of state.pipes) drawPipe(p);
+      drawGround();
+      drawBird();
+    }
+
+    let lastT = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.033, (now - lastT) / 1000);
+      lastT = now;
+      state.t += dt;
+      update(dt);
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    // Input
+    function onFlap(e) {
+      e.preventDefault();
+      flap();
+    }
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') onFlap(e);
+      if (e.code === 'KeyR' && state.mode === 'dead') reset();
+    });
+    document.getElementById('stage').addEventListener('pointerdown', (e) => {
+      // Ignore clicks on buttons/overlay elements that have their own handlers
+      if (e.target.closest('button, a')) return;
+      onFlap(e);
+    });
+    startBtn.addEventListener('click', (e) => { e.stopPropagation(); start(); });
+    restartBtn.addEventListener('click', (e) => { e.stopPropagation(); reset(); start(); });
+
+    window.addEventListener('resize', fitCanvas);
+    fitCanvas();
+    reset();
+    requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>
