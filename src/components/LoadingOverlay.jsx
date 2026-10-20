@@ -31,23 +31,41 @@ export default function LoadingOverlay({ onEnter }) {
     return () => clearTimeout(t);
   }, []);
 
+  const [arming, setArming] = useState(false);
+  const [flash, setFlash] = useState(false);
+
   function enter() {
-    // ConsoleScene listens: rumble + quake + rock-slab reveal start now,
-    // under the overlay fade, so the room is already moving when it clears.
+    if (arming) return;
+    // Timeline: 0 anticipation (button swells + blinks, wall shivers,
+    // charge tone) · 450 one white frame + freeze · 540 blast (ConsoleScene).
     window.dispatchEvent(new CustomEvent("room-enter"));
-    setVisible(false);
-    // Hero text follows once the lower slabs have cleared the plinth.
-    setTimeout(() => onEnter?.(), 1500);
+    setArming(true);
+    setTimeout(() => { setFlash(true); setVisible(false); }, 450);
+    setTimeout(() => setFlash(false), 720);
+    // Hero text lands once the slabs and debris have cleared the plinth.
+    setTimeout(() => onEnter?.(), 2000);
   }
 
   return (
     <AnimatePresence>
+      {flash && (
+        <motion.div
+          key="flash"
+          aria-hidden
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22, delay: 0.09, ease: "easeOut" }} // 90 ms hold = the freeze
+          className="fixed inset-0 z-[101] pointer-events-none bg-white"
+        />
+      )}
       {visible && (
         <motion.div
+          key="overlay"
           initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.05 }} // cut, not fade: the white frame does the transition
           className="fixed inset-0 z-[100] flex flex-col items-center justify-center text-white px-6"
           style={{
             background: "radial-gradient(ellipse at center, #0a0d14 0%, #000 70%)",
@@ -94,7 +112,23 @@ export default function LoadingOverlay({ onEnter }) {
               <motion.button
                 key="enter"
                 initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
+                animate={
+                  arming
+                    ? { // anticipation: swell + blink, 450 ms
+                        opacity: [1, 0.55, 1, 0.5, 1],
+                        y: 0,
+                        scale: [1, 1.12, 1.06, 1.18, 1.28],
+                        boxShadow: [
+                          "0 8px 32px rgba(0,113,227,0.35)",
+                          "0 0 60px rgba(120,180,255,0.9)",
+                          "0 8px 32px rgba(0,113,227,0.35)",
+                          "0 0 80px rgba(200,225,255,1)",
+                          "0 0 120px rgba(255,255,255,1)",
+                        ],
+                        transition: { duration: 0.45, ease: "easeIn", times: [0, 0.3, 0.55, 0.8, 1] },
+                      }
+                    : { opacity: 1, y: 0 }
+                }
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
                 onClick={enter}

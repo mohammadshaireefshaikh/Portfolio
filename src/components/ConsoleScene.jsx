@@ -175,6 +175,36 @@ function rumble() {
   }
 }
 
+// Anticipation: rising charge whine + ticking blink, ~0.45 s
+function charge() {
+  const a = ctx();
+  if (!a || muted) return;
+  const t0 = a.currentTime;
+  const o = a.createOscillator();
+  o.type = "sawtooth";
+  o.frequency.setValueAtTime(70, t0);
+  o.frequency.exponentialRampToValueAtTime(900, t0 + 0.45);
+  const lp = a.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.setValueAtTime(400, t0);
+  lp.frequency.exponentialRampToValueAtTime(3000, t0 + 0.45);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.4);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+  o.connect(lp).connect(g).connect(a.destination);
+  o.start(t0); o.stop(t0 + 0.5);
+  [0, 150, 270, 360, 420].forEach((ms) =>
+    setTimeout(() => tone({ freq: 1800, type: "square", dur: 0.02, gain: 0.05 }), ms));
+}
+// Impact: crack + boom, then the long rumble underneath
+function impact() {
+  noise(0.12, 0.5, 6000, 800);
+  tone({ freq: 95, type: "sine", dur: 0.6, gain: 0.5, slide: -60 });
+  tone({ freq: 48, type: "triangle", dur: 0.9, gain: 0.3, slide: -18 });
+  rumble();
+}
+
 // Sci-fi arpeggio drone — synth background music, no files
 function startMusic() {
   const a = ctx();
@@ -260,18 +290,20 @@ function stopMusic() {
 const shake = { amp: 0 };
 // Room quake on ENTER (moves the world, not the camera — OrbitControls owns
 // the camera in idle and would fight a camera offset).
-const quake = { amp: 0 };
+// amp = impact shake (decays); tremble = anticipation shiver (held until cleared)
+const quake = { amp: 0, tremble: 0 };
 
 function Quake({ children }) {
   const ref = useRef(null);
   useFrame((_, dt) => {
     if (!ref.current) return;
-    if (quake.amp > 0.0005) {
-      const n = performance.now() * 0.05;
+    const a = quake.amp + quake.tremble;
+    if (a > 0.0005) {
+      const n = performance.now() * (quake.tremble > 0 && quake.amp < 0.01 ? 0.09 : 0.05);
       ref.current.position.set(
-        Math.sin(n) * quake.amp,
-        Math.cos(n * 1.37) * quake.amp * 0.5,
-        Math.sin(n * 0.83) * quake.amp * 0.7
+        Math.sin(n) * a,
+        Math.cos(n * 1.37) * a * 0.5,
+        Math.sin(n * 0.83) * a * 0.7
       );
       quake.amp *= Math.exp(-1.6 * dt);
     } else if (ref.current.position.lengthSq() > 0) {
@@ -281,42 +313,55 @@ function Quake({ children }) {
   return <group ref={ref}>{children}</group>;
 }
 
+// Camera-space basis for the intro: a plane in front of the room that fills
+// the idle camera's view. Shared by the slab wall, shockwave, debris, smoke.
+function wallBasis(size) {
+  const dist = IDLE_POS.distanceTo(IDLE_LOOK) - 6;
+  const fov = getRoomFov(size.width, size.height);
+  const halfH = dist * Math.tan(THREE.MathUtils.degToRad(fov / 2)) * 1.15;
+  const halfW = halfH * (size.width / Math.max(1, size.height)) * 1.1;
+  // PerspectiveCamera, not Object3D: only cameras look down -Z.
+  const cam = new THREE.PerspectiveCamera();
+  cam.position.copy(IDLE_POS);
+  cam.lookAt(IDLE_LOOK);
+  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
+  const center = IDLE_POS.clone().addScaledVector(fwd, dist);
+  return { dist, halfH, halfW, cam, fwd, right, up, center };
+}
+
 // ─── Rock-slab reveal (igloo.inc-style instanced shards) ─────────────
-// A wall of charcoal slabs fills the idle camera's view at a plane in front
-// of the room. On ENTER each slab lets go bottom-first with a little random
-// stagger, falls, slides sideways, tumbles and shrinks away.
+// A wall of charcoal slabs seals the room. While arming it shivers; on the
+// blast a shockwave runs out from the centre and each slab is knocked
+// radially outward (delay = distance from impact), falls, tumbles, shrinks.
 const ROCK_ROWS = 10;
-function RockReveal({ startedAt, onDone }) {
+function RockReveal({ startedAt, arming, onDone }) {
   const { size } = useThree();
   const mesh = useRef(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const done = useRef(false);
 
   const data = useMemo(() => {
-    const dist = IDLE_POS.distanceTo(IDLE_LOOK) - 6;
-    const fov = getRoomFov(size.width, size.height);
-    const halfH = dist * Math.tan(THREE.MathUtils.degToRad(fov / 2)) * 1.15;
-    const halfW = halfH * (size.width / Math.max(1, size.height)) * 1.1;
+    const b = wallBasis(size);
+    const { halfH, halfW, cam, fwd, right, up, center } = b;
     const cell = (2 * halfH) / ROCK_ROWS;
     const cols = Math.ceil((2 * halfW) / cell) + 1;
-    // PerspectiveCamera, not Object3D: only cameras look down -Z.
-    const cam = new THREE.PerspectiveCamera();
-    cam.position.copy(IDLE_POS);
-    cam.lookAt(IDLE_LOOK);
-    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
-    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
-    const center = IDLE_POS.clone().addScaledVector(fwd, dist);
+    const maxR = Math.hypot(halfW, halfH);
     const items = [];
     for (let r = 0; r < ROCK_ROWS; r++) {
       for (let c = 0; c < cols; c++) {
         const x = (c - (cols - 1) / 2) * cell;
         const y = (r - (ROCK_ROWS - 1) / 2) * cell;
+        const rad = Math.hypot(x, y) || 0.001;
         items.push({
           rest: center.clone().addScaledVector(right, x).addScaledVector(up, y),
-          delay: (r / ROCK_ROWS) * 0.9 + Math.random() * 0.3,
-          driftX: (Math.random() - 0.5) * 2.4,
-          spin: (Math.random() - 0.5) * 3,
+          // shockwave front: outward from the impact point
+          delay: (rad / maxR) * 0.55 + Math.random() * 0.12,
+          // knock-back direction = radial in the wall plane
+          kx: (x / rad) * (2.5 + Math.random() * 2),
+          ky: (y / rad) * (2.5 + Math.random() * 2),
+          spin: (Math.random() - 0.5) * 4,
           seed: Math.random() * Math.PI * 2,
           depth: 0.6 + Math.random() * 0.5,
         });
@@ -346,18 +391,25 @@ function RockReveal({ startedAt, onDone }) {
       dummy.quaternion.copy(data.cam.quaternion);
       let s = 1;
       if (t > 0) {
-        // fall + sideways slide + tumble, then shrink out
-        dummy.position.addScaledVector(data.up, -4.9 * t * t);
-        dummy.position.addScaledVector(data.right, it.driftX * t);
-        dummy.position.addScaledVector(data.fwd, -1.5 * t);
+        // knocked back radially + toward the viewer, gravity, tumble, shrink
+        dummy.position.addScaledVector(data.right, it.kx * t);
+        dummy.position.addScaledVector(data.up, it.ky * t - 4.9 * t * t);
+        dummy.position.addScaledVector(data.fwd, -2.2 * t);
         dummy.rotateX(it.spin * t);
         dummy.rotateZ(it.spin * 0.6 * t + it.seed * 0.02);
         s = THREE.MathUtils.clamp(1 - (t - 0.9) * 1.6, 0, 1);
         if (s > 0) allGone = false;
       } else {
         allGone = false;
-        // sleeping wall breathes very slightly with the quake
-        dummy.position.addScaledVector(data.fwd, Math.sin(now * 0.002 + it.seed) * 0.02);
+        if (arming) {
+          // anticipation: the whole wall shivers, harder toward the centre
+          const j = 0.05 + 0.04 * Math.random();
+          dummy.position.addScaledVector(data.right, Math.sin(now * 0.07 + it.seed) * j);
+          dummy.position.addScaledVector(data.up, Math.cos(now * 0.09 + it.seed * 2) * j);
+        } else {
+          // sleeping wall breathes very slightly
+          dummy.position.addScaledVector(data.fwd, Math.sin(now * 0.002 + it.seed) * 0.02);
+        }
       }
       dummy.scale.set(s, s, s * it.depth);
       dummy.updateMatrix();
@@ -372,6 +424,165 @@ function RockReveal({ startedAt, onDone }) {
       <boxGeometry args={[data.cell * 0.97, data.cell * 0.97, data.cell * 0.5]} />
       <meshStandardMaterial color="#ffffff" roughness={0.95} metalness={0.02} flatShading />
     </instancedMesh>
+  );
+}
+
+// ─── Blast FX: shockwave ring + debris arcs + lingering smoke ─────────
+const DEBRIS_N = 140;
+const SMOKE_N = 12;
+function softDiscTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const g = c.getContext("2d");
+  const grd = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+  grd.addColorStop(0, "rgba(255,255,255,1)");
+  grd.addColorStop(0.5, "rgba(255,255,255,0.35)");
+  grd.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+
+function BlastFX({ at }) {
+  const { size } = useThree();
+  const b = useMemo(() => wallBasis(size), [size.width, size.height]);
+  const ring = useRef(null);
+  const debris = useRef(null);
+  const smoke = useRef(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const disc = useMemo(softDiscTexture, []);
+  useEffect(() => () => disc.dispose(), [disc]);
+
+  const parts = useMemo(() => {
+    const d = [];
+    for (let i = 0; i < DEBRIS_N; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const sp = 5 + Math.random() * 9;
+      d.push({
+        vx: Math.cos(ang) * sp,
+        vy: Math.sin(ang) * sp + 2,
+        vz: -(2 + Math.random() * 7), // toward the viewer
+        spin: (Math.random() - 0.5) * 12,
+        size: 0.12 + Math.random() * 0.22,
+        seed: Math.random() * 6.28,
+      });
+    }
+    const s = [];
+    for (let i = 0; i < SMOKE_N; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const r = Math.random() * 2.5;
+      s.push({ ox: Math.cos(ang) * r, oy: Math.sin(ang) * r, rise: 0.6 + Math.random(), grow: 5 + Math.random() * 5, seed: Math.random() });
+    }
+    return { d, s };
+  }, []);
+
+  useEffect(() => {
+    if (!debris.current) return;
+    const col = new THREE.Color();
+    parts.d.forEach((_, i) => { col.setHSL(0.6, 0.05, 0.1 + Math.random() * 0.12); debris.current.setColorAt(i, col); });
+    debris.current.instanceColor.needsUpdate = true;
+  }, [parts]);
+
+  useFrame(() => {
+    const t = (performance.now() - at) / 1000;
+    if (t < 0) return;
+    // Shockwave ring: fast expand, fade
+    if (ring.current) {
+      const k = Math.min(1, t / 0.7);
+      const e = 1 - Math.pow(1 - k, 3);
+      const R = 0.5 + e * Math.hypot(b.halfW, b.halfH) * 1.5;
+      ring.current.scale.set(R, R, 1);
+      ring.current.material.opacity = 0.85 * (1 - k);
+      ring.current.visible = k < 1;
+    }
+    // Debris arcs
+    if (debris.current) {
+      parts.d.forEach((p, i) => {
+        const life = THREE.MathUtils.clamp(1 - (t - 1.3) * 1.4, 0, 1);
+        dummy.position.copy(b.center)
+          .addScaledVector(b.right, p.vx * t)
+          .addScaledVector(b.up, p.vy * t - 4.9 * t * t)
+          .addScaledVector(b.fwd, p.vz * t);
+        dummy.rotation.set(p.spin * t, p.seed, p.spin * 0.7 * t);
+        const s = p.size * life;
+        dummy.scale.set(s, s, s);
+        dummy.updateMatrix();
+        debris.current.setMatrixAt(i, dummy.matrix);
+      });
+      debris.current.instanceMatrix.needsUpdate = true;
+    }
+    // Smoke: grow, drift up, linger
+    if (smoke.current) {
+      const fade = THREE.MathUtils.clamp(1 - t / 4.2, 0, 1);
+      smoke.current.children.forEach((sp, i) => {
+        const p = parts.s[i];
+        const g = 1.5 + p.grow * Math.min(1, t / 2.5);
+        sp.position.copy(b.center)
+          .addScaledVector(b.right, p.ox * (1 + t * 0.3))
+          .addScaledVector(b.up, p.oy + p.rise * t)
+          .addScaledVector(b.fwd, -1 - t * 0.4);
+        sp.scale.set(g, g, 1);
+        sp.material.opacity = 0.32 * fade * Math.min(1, t / 0.25);
+        sp.material.rotation = p.seed * 6 + t * 0.15;
+      });
+    }
+  });
+
+  return (
+    <group>
+      <mesh ref={ring} position={b.center} quaternion={b.cam.quaternion}>
+        <ringGeometry args={[0.92, 1, 64]} />
+        <meshBasicMaterial color="#dfeaff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+      <instancedMesh ref={debris} args={[null, null, DEBRIS_N]} frustumCulled={false}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.95} flatShading />
+      </instancedMesh>
+      <group ref={smoke}>
+        {parts.s.map((_, i) => (
+          <sprite key={i}>
+            <spriteMaterial map={disc} color="#3a3e48" transparent opacity={0} depthWrite={false} />
+          </sprite>
+        ))}
+      </group>
+    </group>
+  );
+}
+
+// Scorch: a burn mark on the plinth that fades in on impact and stays.
+function Scorch({ at }) {
+  const ref = useRef(null);
+  const tex = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 256;
+    const g = c.getContext("2d");
+    const grd = g.createRadialGradient(128, 128, 10, 128, 128, 128);
+    // charred core → pale ash halo → nothing (black alone vanishes on charcoal)
+    grd.addColorStop(0, "rgba(0,0,0,0.95)");
+    grd.addColorStop(0.35, "rgba(10,8,8,0.7)");
+    grd.addColorStop(0.6, "rgba(150,140,130,0.28)");
+    grd.addColorStop(1, "rgba(150,140,130,0)");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 256, 256);
+    // ragged edge
+    for (let i = 0; i < 40; i++) {
+      const a = Math.random() * 6.28, r = 70 + Math.random() * 50;
+      g.beginPath(); g.arc(128 + Math.cos(a) * r, 128 + Math.sin(a) * r, 8 + Math.random() * 14, 0, 6.28);
+      g.fillStyle = "rgba(0,0,0,0.35)"; g.fill();
+    }
+    return new THREE.CanvasTexture(c);
+  }, []);
+  useEffect(() => () => tex.dispose(), [tex]);
+  useFrame(() => {
+    if (!ref.current) return;
+    const t = (performance.now() - at) / 1000;
+    ref.current.material.opacity = t < 0 ? 0 : THREE.MathUtils.lerp(0, 0.6, Math.min(1, t / 0.35));
+  });
+  return (
+    <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0.4]} position={[0.3, ROOM.floorY + 0.018, 0.2]} renderOrder={2}>
+      <planeGeometry args={[7, 7]} />
+      <meshBasicMaterial map={tex} transparent opacity={0} depthWrite={false} />
+    </mesh>
   );
 }
 
@@ -1839,15 +2050,27 @@ export default function ConsoleScene() {
   const [orbitOn, setOrbitOn] = useState(true); // false while CameraRig animates
 
   // ENTER THE ROOM intro: LoadingOverlay fires 'room-enter' on the click.
-  const [introAt, setIntroAt] = useState(null);   // timestamp slabs let go
+  const [introAt, setIntroAt] = useState(null);   // blast timestamp
+  const [arming, setArming] = useState(false);     // anticipation shiver
+  const [blastFx, setBlastFx] = useState(false);   // ring/debris/smoke alive
   const [introDone, setIntroDone] = useState(false);
   useEffect(() => {
+    // Timeline (ms after click): 0 charge + shiver · 450 freeze (overlay
+    // flashes white) · 540 impact: shockwave, slabs, debris, smoke, scorch.
     const onEnter = () => {
-      rumble();
-      if (reduceMotion) { setIntroDone(true); return; }
-      // overlay fades for ~0.6 s; let the first slabs drop as it clears
-      setIntroAt(performance.now() + 250);
-      setTimeout(() => { quake.amp = 0.22; }, 250);
+      charge();
+      if (reduceMotion) { setTimeout(impact, 540); setIntroDone(true); return; }
+      setArming(true);
+      quake.tremble = 0.04;
+      setTimeout(() => { quake.tremble = 0; setArming(false); }, 450);
+      setTimeout(() => {
+        impact();
+        quake.amp = 0.42;
+        const now = performance.now();
+        setIntroAt(now);
+        setBlastFx(true);
+        setTimeout(() => setBlastFx(false), 4600);
+      }, 540);
     };
     window.addEventListener("room-enter", onEnter);
     return () => window.removeEventListener("room-enter", onEnter);
@@ -1995,7 +2218,11 @@ export default function ConsoleScene() {
           </Suspense>
         </Quake>
         {!introDone && !inGame && (
-          <RockReveal startedAt={introAt} onDone={() => setIntroDone(true)} />
+          <RockReveal startedAt={introAt} arming={arming} onDone={() => setIntroDone(true)} />
+        )}
+        {blastFx && !inGame && <BlastFX at={introAt} />}
+        {introAt != null && !inGame && !reduceMotion && (
+          <Quake><Scorch at={introAt} /></Quake>
         )}
 
         <CameraRig
