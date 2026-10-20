@@ -16,5 +16,21 @@ export function createCabinetSides() {
 }
 
 export function getArcadeFraming(width, height) {
-  return { distance: Math.max(1.85, 1.35 / (width / height)), offsetY: height * 0.07 };
+  return { distance: Math.max(1.85, 1.35 / (width / height)) * (width < 768 ? 1.08 : 1), offsetY: height * 0.07 };
+}
+
+export function getRoomFov(width, height) {
+  const zoomOut = width < 768 ? 1.16 * Math.max(1, 1.05 / (width / Math.max(1, height))) : 1;
+  return THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(10)) * zoomOut));
+}
+
+const signPosition = new THREE.Vector3();
+export function getArcadeSignPosition(object, camera, { width, height }) {
+  signPosition.setFromMatrixPosition(object.matrixWorld).project(camera);
+  const signWidth = Math.min(184, Math.max(144, width * 0.28));
+  const inset = signWidth * 0.54 + 12; // Includes the reminder's 1.08× pop-out.
+  return [
+    THREE.MathUtils.clamp((signPosition.x + 1) * width / 2, inset, width - inset),
+    THREE.MathUtils.clamp((1 - signPosition.y) * height / 2, height < 480 ? 60 : 116, height - 90),
+  ];
 }

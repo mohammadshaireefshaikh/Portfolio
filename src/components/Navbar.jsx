@@ -130,7 +130,7 @@ export default function Navbar() {
           pointerEvents: gameActive ? "none" : "auto",
         }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl"
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%_-_2rem)] max-w-4xl"
       >
         {/* ── Desktop liquid pill ─────────────────────────── */}
         <div
@@ -182,7 +182,7 @@ export default function Navbar() {
                 href={href}
                 aria-label={label}
                 {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                className="w-9 h-9 flex items-center justify-center rounded-full text-[#9aa3b5] hover:text-white hover:bg-white/[0.07] transition-colors duration-200"
+                className="w-11 h-11 flex shrink-0 items-center justify-center rounded-full text-[#9aa3b5] hover:text-white hover:bg-white/[0.07] transition-colors duration-200"
               >
                 <Icon size={16} />
               </a>
@@ -209,9 +209,11 @@ export default function Navbar() {
             <span style={{ color: "#adc6ff" }}>.</span>
           </span>
           <button
-            className="relative z-[1] text-white/90 hover:text-white transition-colors"
+            className="relative z-[1] flex h-11 w-11 items-center justify-center text-white/90 hover:text-white transition-colors"
             onClick={() => setOpen(!open)}
             aria-label="Toggle menu"
+            aria-expanded={open}
+            aria-controls="mobile-navigation"
           >
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -226,9 +228,9 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed top-20 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-sm md:hidden"
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-40 w-[calc(100%_-_2rem)] max-w-sm md:hidden"
           >
-            <div className="liquid-glass rounded-3xl p-3 flex flex-col gap-1">
+            <div id="mobile-navigation" className="liquid-glass max-h-[calc(100dvh_-_6rem)] overflow-y-auto rounded-3xl p-3 flex flex-col gap-1">
               {links.map((l, i) => (
                 <button
                   key={l.href}
@@ -250,7 +252,7 @@ export default function Navbar() {
                 Download CV
               </a>
               {/* Contact row */}
-              <div className="relative z-[1] mt-2 pt-3 border-t border-white/[0.07] flex items-center justify-between px-1">
+              <div className="relative z-[1] mt-2 pt-3 border-t border-white/[0.07] flex flex-wrap items-center justify-between gap-2 px-1">
                 <span className="text-[11px] text-[#86868b] truncate">{personal.email}</span>
                 <div className="flex items-center gap-1">
                   {SOCIALS.map(({ href, label, Icon, external }) => (
@@ -259,7 +261,7 @@ export default function Navbar() {
                       href={href}
                       aria-label={label}
                       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                      className="w-9 h-9 flex items-center justify-center rounded-full text-[#9aa3b5] hover:text-white hover:bg-white/[0.07] transition-colors"
+                      className="w-11 h-11 flex shrink-0 items-center justify-center rounded-full text-[#9aa3b5] hover:text-white hover:bg-white/[0.07] transition-colors"
                     >
                       <Icon size={16} />
                     </a>

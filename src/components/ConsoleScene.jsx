@@ -1,8 +1,8 @@
 import { Suspense, useRef, useMemo, useEffect, useState } from "react";
 import * as THREE from "three";
-import { createCabinetSides, getArcadeFraming } from "./arcadeGeometry";
+import { createCabinetSides, getArcadeFraming, getRoomFov, getArcadeSignPosition } from "./arcadeGeometry";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Float, ContactShadows, RoundedBox, OrbitControls, useTexture } from "@react-three/drei";
+import { Float, ContactShadows, RoundedBox, OrbitControls, useTexture, Html } from "@react-three/drei";
 import { X, Volume2, VolumeX, Play, Trophy, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 
@@ -608,6 +608,15 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
   const group = useRef(null);
   const screenGlow = useRef(null);
   const [hovered, setHovered] = useState(false);
+  const [hasPlayed, setHasPlayed] = useState(false);
+
+  function startGame(e) {
+    e.stopPropagation();
+    if (mode !== "idle") return;
+    setHasPlayed(true);
+    ctx();
+    setMode("playing");
+  }
 
   useFrame(() => {
     if (!group.current) return;
@@ -655,11 +664,27 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
       scale={CABINET_SCALE}
       onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
       onPointerOut={(e) => { e.stopPropagation(); setHovered(false); }}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (mode === "idle") { ctx(); setMode("playing"); }
-      }}
+      onClick={startGame}
     >
+      {mode === "idle" && !hasPlayed && (
+        <Html position={[0, 2.34, 0]} center calculatePosition={getArcadeSignPosition} zIndexRange={[20, 0]}>
+          {/* pointerup + touch-action:manipulation: phones sometimes never
+              deliver `click` here (scroll-intent heuristics, 300 ms delay);
+              startGame is idempotent so both firing is harmless. */}
+          <button
+            type="button"
+            className="arcade-play-sign"
+            style={{ touchAction: "manipulation" }}
+            onPointerUp={startGame}
+            onClick={startGame}
+            aria-label="Play Flappy on the arcade cabinet"
+          >
+            <span className="arcade-play-sign__led" aria-hidden="true" />
+            <span>CLICK TO PLAY GAME</span>
+            <span className="arcade-play-sign__reminder" aria-hidden="true">✦ CLICK ME ✦</span>
+          </button>
+        </Html>
+      )}
       {/* Raised base and profiled side walls with red edge banding. */}
       <RoundedBox args={[0.85, 0.3, 0.83]} position={[0, 0.15, 0]} radius={0.008}>
         <meshStandardMaterial color="#170d10" roughness={0.65} />
@@ -1534,18 +1559,23 @@ function RoomShell() {
 }
 
 // Camera owner rules:
-//  - play/dead: CameraRig drives camera to a low player POV in front of the
-//    cabinet (eye just below the screen line, slight upward tilt, control
-//    ledge + joysticks at the bottom of frame).
+//  - play/dead: CameraRig drives a raised view aimed down at the screen/deck.
 //  - idle: CameraRig animates back to IDLE_POS, then hands the camera to
 //    OrbitControls so visitors can rotate / zoom the room.
 function CameraRig({ mode, reduceMotion, controlsRef, onSettled }) {
   const { camera, size } = useThree();
+  const idleFov = getRoomFov(size.width, size.height);
   const look = useRef(new THREE.Vector3().copy(IDLE_LOOK));
   const playTarget = useRef(new THREE.Vector3());
   const playLook = useRef(new THREE.Vector3());
   const settled = useRef(true); // idle hand-over done?
   const prevMode = useRef(mode);
+
+  // Reframe the room when the viewport changes, including device rotation.
+  useEffect(() => {
+    settled.current = false;
+    onSettled?.(false);
+  }, [idleFov, onSettled]);
 
   useFrame((_, dt) => {
     const inGame = mode === "playing" || mode === "dead";
@@ -1567,7 +1597,7 @@ function CameraRig({ mode, reduceMotion, controlsRef, onSettled }) {
     else if (camera.view?.enabled) camera.clearViewOffset();
 
     const t = reduceMotion ? 1 : 1 - Math.exp(-5 * dt);
-    const targetFov = inGame ? PLAY_FOV : IDLE_FOV;
+    const targetFov = inGame ? PLAY_FOV : idleFov;
 
     if (inGame || !settled.current) {
       const targetPos = inGame ? playTarget.current : IDLE_POS;
@@ -1592,7 +1622,7 @@ function CameraRig({ mode, reduceMotion, controlsRef, onSettled }) {
       // Returned home → snap the last few mm and hand over to OrbitControls.
       if (!inGame && camera.position.distanceTo(IDLE_POS) < 0.05) {
         camera.position.copy(IDLE_POS);
-        camera.fov = IDLE_FOV;
+        camera.fov = idleFov;
         camera.updateProjectionMatrix();
         look.current.copy(IDLE_LOOK);
         if (controlsRef.current) {
@@ -1603,6 +1633,16 @@ function CameraRig({ mode, reduceMotion, controlsRef, onSettled }) {
         onSettled?.(true);
       }
     }
+  });
+  return null;
+}
+
+// One finger = page scroll (pan-y), two fingers = orbit/pinch. While the
+// game is fullscreen the page is locked anyway, so taps can own the canvas.
+function TouchPolicy({ inGame }) {
+  const { gl } = useThree();
+  useEffect(() => {
+    gl.domElement.style.touchAction = inGame ? "none" : "pan-y";
   });
   return null;
 }
@@ -1730,8 +1770,6 @@ export default function ConsoleScene() {
         }}
         onCreated={({ gl }) => {
           const el = gl.domElement;
-          // One-finger touch keeps scrolling the page; two fingers orbit/pinch.
-          el.style.touchAction = "pan-y";
           // Plain wheel scrolls the page; ctrl/⌘+wheel (and trackpad pinch,
           // which browsers report as ctrl+wheel) zooms the room.
           el.addEventListener(
@@ -1795,6 +1833,9 @@ export default function ConsoleScene() {
           maxAzimuthAngle={ORBIT.azimuth + ORBIT.swing}
           touches={{ ONE: null, TWO: THREE.TOUCH.DOLLY_ROTATE }}
         />
+        {/* Must sit AFTER OrbitControls: its connect() forces touch-action:none,
+            which eats one-finger scrolling on phones. */}
+        <TouchPolicy inGame={inGame} />
 
         <Suspense fallback={null}>
           {/* No Float — a 1.9 m cabinet stands on the floor */}
@@ -1822,7 +1863,7 @@ export default function ConsoleScene() {
         <>
           {/* TOP-LEFT: Score + Name entry */}
           <div
-            className="fixed top-5 left-5 z-10 text-white max-w-[260px]"
+            className="fixed top-5 left-4 sm:left-5 z-10 text-white max-w-[140px] sm:max-w-[260px]"
             style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
           >
             <div className="text-[10px] tracking-[0.2em] uppercase text-[#60605c]">SCORE</div>
@@ -1831,7 +1872,7 @@ export default function ConsoleScene() {
               BEST — {best}
             </div>
 
-            <div className="mt-5">
+            <div className="fixed bottom-14 left-4 w-36 sm:static sm:mt-5 sm:w-auto">
               <div className="text-[10px] tracking-[0.2em] uppercase text-[#60605c] mb-1.5">
                 PLAYER
               </div>
@@ -1841,7 +1882,7 @@ export default function ConsoleScene() {
                 placeholder="your name"
                 value={playerName}
                 onChange={(e) => savePlayerName(e.target.value)}
-                className="w-full bg-transparent border-b border-dashed border-white/[0.15] text-sm text-white placeholder-[#444] outline-none focus:border-[#2997ff] transition-colors px-0 py-1"
+                className="w-full bg-transparent border-b border-dashed border-white/[0.15] text-base sm:text-sm text-white placeholder-[#86868b] outline-none focus:border-[#2997ff] transition-colors px-0 py-1"
                 style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
               />
             </div>
@@ -1852,7 +1893,7 @@ export default function ConsoleScene() {
             <button
               onClick={() => { const n = !isMuted; setIsMuted(n); setMuted(n); }}
               aria-label={isMuted ? "Unmute" : "Mute"}
-              className="w-10 h-10 flex items-center justify-center rounded-full text-[#86868b] hover:text-white transition-colors"
+              className="w-11 h-11 flex items-center justify-center rounded-full text-[#86868b] hover:text-white transition-colors"
               style={{
                 background: "rgba(255,255,255,0.06)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -1864,7 +1905,7 @@ export default function ConsoleScene() {
             <button
               onClick={() => setMode("idle")}
               aria-label="Exit game"
-              className="w-10 h-10 flex items-center justify-center rounded-full text-[#86868b] hover:text-white transition-colors"
+              className="w-11 h-11 flex items-center justify-center rounded-full text-[#86868b] hover:text-white transition-colors"
               style={{
                 background: "rgba(255,255,255,0.06)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -1877,7 +1918,7 @@ export default function ConsoleScene() {
 
           {mode === "playing" && (
             <div
-              className="pointer-events-none fixed bottom-5 left-1/2 -translate-x-1/2 z-10 text-[10px] tracking-[0.2em] uppercase text-[#60605c]"
+              className="pointer-events-none fixed bottom-5 left-1/2 -translate-x-1/2 z-10 w-[calc(100%_-_2rem)] max-w-md text-center text-[9px] sm:text-[10px] tracking-[0.15em] uppercase text-[#86868b]"
               style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
             >
               SPACE / TAP FLAP · M MUTE · ESC EXIT

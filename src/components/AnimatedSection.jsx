@@ -7,13 +7,16 @@ const sectionVariants = {
   },
 };
 
+// A fast side entrance, a short overshoot, then a firm stop (520 ms).
+// MotionConfig in App disables positional motion when the user requests it.
 export const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
+  hidden: { opacity: 0, x: -64, skewX: -5 },
+  visible: (delay = 0) => ({
     opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] },
-  },
+    x: [-64, 8, 0],
+    skewX: [-5, 1, 0],
+    transition: { duration: 0.52, times: [0, 0.78, 1], ease: "easeOut", delay },
+  }),
 };
 
 export default function AnimatedSection({ children, className = "", id }) {
@@ -35,7 +38,7 @@ export function AnimatedItem({ children, className = "", delay = 0 }) {
   return (
     <motion.div
       variants={itemVariants}
-      transition={{ duration: 0.75, delay, ease: [0.25, 0.1, 0.25, 1] }}
+      custom={delay}
       className={className}
     >
       {children}

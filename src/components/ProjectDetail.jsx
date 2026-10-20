@@ -59,7 +59,7 @@ export default function ProjectDetail({ project, onClose }) {
             onClick={onClose}
           >
             <div
-              className="w-full max-w-3xl relative rounded-3xl overflow-hidden"
+              className="w-full min-w-0 max-w-3xl shrink-0 relative rounded-3xl overflow-hidden"
               style={{
                 background: "#0a0a0a",
                 border: "1px solid rgba(255,255,255,0.08)",
@@ -70,7 +70,7 @@ export default function ProjectDetail({ project, onClose }) {
               {/* Close button */}
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 z-10 w-9 h-9 flex items-center justify-center rounded-full text-[#86868b] hover:text-white transition-colors duration-200 active:scale-95"
+                className="absolute top-4 right-4 z-10 w-11 h-11 flex items-center justify-center rounded-full text-[#86868b] hover:text-white transition-colors duration-200 active:scale-95"
                 style={{
                   background: "rgba(255,255,255,0.06)",
                   border: "1px solid rgba(255,255,255,0.08)",
@@ -99,7 +99,7 @@ export default function ProjectDetail({ project, onClose }) {
               )}
 
               {/* Body */}
-              <div className="px-6 sm:px-10 pt-8 pb-10">
+              <div className="px-5 sm:px-10 pt-8 pb-10">
                 <div className="flex items-center gap-3 mb-4 flex-wrap">
                   <span className="text-xs text-[#555]">{project.year}</span>
                   {project.impact && (

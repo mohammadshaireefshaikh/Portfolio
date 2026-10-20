@@ -24,7 +24,7 @@ const METRICS = [
 
 export default function About() {
   return (
-    <section id="about" className="py-28 px-6 border-t border-white/[0.06]">
+    <section id="about" className="py-16 sm:py-28 px-5 sm:px-6 border-t border-white/[0.06]">
       <div className="max-w-5xl mx-auto">
         <AnimatedSection className="mb-16">
           <AnimatedItem>
@@ -38,12 +38,12 @@ export default function About() {
             </h2>
           </AnimatedItem>
           <AnimatedItem>
-            <p className="text-lg text-[#6e6e73] leading-relaxed max-w-2xl mb-4">
+            <p className="text-lg text-[#9a9aa1] leading-relaxed max-w-2xl mb-4">
               {personal.bio}
             </p>
           </AnimatedItem>
           <AnimatedItem>
-            <div className="flex items-center gap-2 text-sm text-[#444]">
+            <div className="flex items-center gap-2 text-sm text-[#86868b]">
               <MapPin size={13} />
               <span>{personal.location}</span>
             </div>
@@ -67,7 +67,7 @@ export default function About() {
                     {m.value}
                   </p>
                   <p className="text-sm font-medium text-[#f5f5f7]">{m.label}</p>
-                  <p className="text-xs text-[#444] mt-0.5">{m.context}</p>
+                  <p className="text-xs text-[#86868b] mt-0.5">{m.context}</p>
                 </motion.div>
               </AnimatedItem>
             ))}
@@ -76,7 +76,7 @@ export default function About() {
 
         <AnimatedSection>
           <AnimatedItem>
-            <p className="text-xs font-medium tracking-[0.2em] uppercase text-[#555] mb-5">
+            <p className="text-xs font-medium tracking-[0.2em] uppercase text-[#86868b] mb-5">
               Recognition
             </p>
           </AnimatedItem>
@@ -101,15 +101,15 @@ export default function About() {
                       border: i === 0 ? "1px solid rgba(0,113,227,0.3)" : "1px solid rgba(255,255,255,0.07)",
                     }}
                   >
-                    <Trophy size={14} style={{ color: i === 0 ? "#2997ff" : "#555" }} />
+                    <Trophy size={14} style={{ color: i === 0 ? "#2997ff" : "#86868b" }} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
                       <p className="text-sm font-semibold text-white">{award.title}</p>
-                      <span className="text-[10px] text-[#444]">{award.year}</span>
+                      <span className="text-[10px] text-[#86868b]">{award.year}</span>
                     </div>
                     <p className="text-xs text-[#0071e3] mb-1.5">{award.subtitle}</p>
-                    <p className="text-xs text-[#555] leading-relaxed">{award.detail}</p>
+                    <p className="text-xs text-[#86868b] leading-relaxed">{award.detail}</p>
                   </div>
                 </motion.div>
               </AnimatedItem>

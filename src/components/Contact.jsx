@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Send, CheckCircle } from "lucide-react";
+import { Send } from "lucide-react";
 import { GitHubIcon, LinkedInIcon } from "./Icons";
-import AnimatedSection, { AnimatedItem } from "./AnimatedSection";
+import AnimatedSection, { AnimatedItem, itemVariants } from "./AnimatedSection";
 import { personal } from "../data/portfolio";
 
 export default function Contact() {
@@ -29,16 +29,16 @@ export default function Contact() {
   const mono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
 
   const inputClass =
-    "w-full bg-transparent text-white placeholder-[#555] outline-none transition-colors duration-150 ease-out text-sm";
+    "w-full bg-transparent text-white placeholder-[#86868b] outline-none transition-colors duration-150 ease-out text-base sm:text-sm";
   const promptStyle = { ...mono, color: "#2997ff" };
 
   return (
-    <section id="contact" className="py-28 px-6 border-t border-white/[0.06]">
+    <section id="contact" className="py-16 sm:py-28 px-5 sm:px-6 border-t border-white/[0.06]">
       <div className="max-w-3xl mx-auto">
         <AnimatedSection className="mb-10">
           <AnimatedItem>
             <p
-              className="text-[10px] font-medium tracking-[0.2em] uppercase text-[#555] mb-3"
+              className="text-[10px] font-medium tracking-[0.2em] uppercase text-[#86868b] mb-3"
               style={mono}
             >
               [04 / CONTACT]
@@ -50,7 +50,7 @@ export default function Contact() {
             </h2>
           </AnimatedItem>
           <AnimatedItem>
-            <p className="text-[#6e6e73] text-base max-w-xl">
+            <p className="text-[#9a9aa1] text-base max-w-xl">
               Open to full-time roles, contract work, and interesting projects in the UK.
             </p>
           </AnimatedItem>
@@ -58,10 +58,11 @@ export default function Contact() {
 
         {/* Terminal frame — hard offset shadow + sharp border */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          variants={itemVariants}
+          custom={0.1}
+          initial="hidden"
+          whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
           className="relative"
           style={{
             background: "#030304",
@@ -72,25 +73,25 @@ export default function Contact() {
         >
           {/* Terminal top bar */}
           <div
-            className="flex items-center justify-between px-4 py-2.5 border-b"
+            className="flex items-center justify-between gap-3 px-4 py-2.5 border-b"
             style={{ borderColor: "#2a2a28" }}
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#3a3a38" }} />
               <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#3a3a38" }} />
               <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#3a3a38" }} />
             </div>
-            <p className="text-[10px] tracking-[0.15em] uppercase text-[#60605c]" style={mono}>
+            <p className="min-w-0 truncate text-[10px] tracking-[0.08em] sm:tracking-[0.15em] uppercase text-[#86868b]" style={mono}>
               mohammad@portfolio:~ / contact
             </p>
-            <span className="w-10" />
+            <span className="hidden w-10 sm:block" />
           </div>
 
           {/* Terminal body */}
           <div className="px-5 py-6 sm:px-8 sm:py-8" style={mono}>
             {sent ? (
               <div className="flex flex-col gap-1.5 text-sm">
-                <p className="text-[#60605c]">$ send message</p>
+                <p className="text-[#86868b]">$ send message</p>
                 <p className="text-[#2997ff]">→ opened in your mail app</p>
                 <p className="text-[#ecece8]">Hit send there and I'll be in touch soon.</p>
                 <span className="inline-block w-2 h-4 bg-[#2997ff] mt-1 animate-pulse" />
@@ -98,7 +99,7 @@ export default function Contact() {
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                 <div>
-                  <label className="text-[11px] tracking-wider text-[#60605c] mb-1 block">
+                  <label className="text-[11px] tracking-wider text-[#86868b] mb-1 block">
                     <span style={promptStyle}>$ </span>name:
                   </label>
                   <input
@@ -114,7 +115,7 @@ export default function Contact() {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] tracking-wider text-[#60605c] mb-1 block">
+                  <label className="text-[11px] tracking-wider text-[#86868b] mb-1 block">
                     <span style={promptStyle}>$ </span>email:
                   </label>
                   <input
@@ -130,7 +131,7 @@ export default function Contact() {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] tracking-wider text-[#60605c] mb-1 block">
+                  <label className="text-[11px] tracking-wider text-[#86868b] mb-1 block">
                     <span style={promptStyle}>$ </span>message:
                   </label>
                   <textarea
@@ -145,8 +146,8 @@ export default function Contact() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between gap-4 pt-2">
-                  <p className="text-[11px] text-[#60605c]">
+                <div className="flex flex-col items-stretch gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-[11px] text-[#86868b]">
                     <span style={promptStyle}>$ </span>opens your mail app · nothing stored here ·{" "}
                     <a href="/privacy.html" className="underline hover:text-white">privacy</a>
                   </p>
@@ -154,7 +155,7 @@ export default function Contact() {
                     type="submit"
                     disabled={loading}
                     whileTap={{ scale: 0.98 }}
-                    className="inline-flex items-center gap-2 px-5 py-2 text-xs font-medium text-white disabled:opacity-40 transition-colors duration-150"
+                    className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap px-5 py-2 text-xs font-medium text-white disabled:opacity-40 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2997ff] sm:w-auto"
                     style={{
                       ...mono,
                       background: "transparent",
@@ -170,7 +171,8 @@ export default function Contact() {
                       e.currentTarget.style.color = "#ecece8";
                     }}
                   >
-                    {loading ? "[ sending... ]" : <>[ send ] <Send size={11} /></>}
+                    <span>{loading ? "[ sending... ]" : "[ send ]"}</span>
+                    {!loading && <Send size={13} className="shrink-0" aria-hidden="true" />}
                   </motion.button>
                 </div>
               </form>
@@ -180,16 +182,17 @@ export default function Contact() {
 
         {/* Signoff row — mono, minimal */}
         <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          variants={itemVariants}
+          custom={0.15}
+          initial="hidden"
+          whileInView="visible"
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
           className="flex flex-wrap items-center justify-between gap-4 mt-6 pt-5 border-t border-white/[0.06]"
           style={mono}
         >
           <a
             href={`mailto:${personal.email}`}
-            className="text-xs text-[#86868b] hover:text-white transition-colors duration-200"
+            className="min-w-0 break-all text-xs text-[#86868b] hover:text-white transition-colors duration-200"
           >
             {personal.email}
           </a>
@@ -198,7 +201,7 @@ export default function Contact() {
               href={personal.github}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#555] hover:text-white transition-colors duration-200"
+              className="text-[#86868b] hover:text-white transition-colors duration-200"
               aria-label="GitHub"
             >
               <GitHubIcon size={16} />
@@ -207,7 +210,7 @@ export default function Contact() {
               href={personal.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#555] hover:text-white transition-colors duration-200"
+              className="text-[#86868b] hover:text-white transition-colors duration-200"
               aria-label="LinkedIn"
             >
               <LinkedInIcon size={16} />

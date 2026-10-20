@@ -14,7 +14,7 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen bg-black text-white">
         <Navbar />
-        <main>
+        <main className="overflow-x-clip">
           <Hero />
           <About />
           <Skills />

@@ -10,6 +10,7 @@ export default function HeroChatCTA({ compact = false }) {
 
   return (
     <motion.button
+      id="hero-chat-cta"
       onClick={openChat}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
@@ -18,7 +19,7 @@ export default function HeroChatCTA({ compact = false }) {
       whileTap={{ scale: 0.98 }}
       className={`group relative inline-flex items-center overflow-hidden ${
         compact
-          ? "gap-2 pl-2 pr-3 py-1.5 rounded-full"
+          ? "col-span-2 w-full min-h-11 justify-center gap-2 pl-2 pr-3 py-1.5 rounded-full sm:w-auto"
           : "gap-3 pl-3 pr-4 py-3 rounded-2xl"
       }`}
       style={{

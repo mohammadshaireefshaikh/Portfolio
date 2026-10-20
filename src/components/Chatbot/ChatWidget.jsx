@@ -22,6 +22,8 @@ const API_URL = import.meta.env.VITE_API_URL || "/api/chat";
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
+  const [gameActive, setGameActive] = useState(false);
+  const [heroCtaVisible, setHeroCtaVisible] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [messages, setMessages] = useState([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
@@ -29,6 +31,14 @@ export default function ChatWidget() {
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const abortRef = useRef(null);
+
+  useEffect(() => {
+    const cta = document.getElementById("hero-chat-cta");
+    if (!cta) return;
+    const observer = new IntersectionObserver(([entry]) => setHeroCtaVisible(entry.isIntersecting));
+    observer.observe(cta);
+    return () => observer.disconnect();
+  }, []);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -49,8 +59,13 @@ export default function ChatWidget() {
       setOpen(true);
       setShowTooltip(false);
     };
+    const onMode = (e) => setGameActive(e.detail !== "idle");
     window.addEventListener("open-chat", onOpen);
-    return () => window.removeEventListener("open-chat", onOpen);
+    window.addEventListener("game-mode", onMode);
+    return () => {
+      window.removeEventListener("open-chat", onOpen);
+      window.removeEventListener("game-mode", onMode);
+    };
   }, []);
 
   // Show first-visit tooltip once, then hide on any interaction
@@ -184,7 +199,7 @@ export default function ChatWidget() {
   const showStarters = messages.length === 1 && !loading;
 
   return (
-    <>
+    <div hidden={gameActive}>
       {/* ── Chat panel ─────────────────────────────────────────── */}
       <AnimatePresence>
         {open && (
@@ -194,10 +209,11 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.97 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed bottom-24 right-5 z-50 flex flex-col"
+            className="fixed bottom-24 right-3 sm:right-5 z-50 flex flex-col"
             style={{
               width: "min(420px, calc(100vw - 24px))",
-              height: "min(580px, calc(100svh - 130px))",
+              height: "min(580px, calc(100dvh - 130px - env(safe-area-inset-bottom)))",
+              bottom: "calc(6rem + env(safe-area-inset-bottom))",
               background: "#0d0d0d",
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: "20px",
@@ -225,7 +241,7 @@ export default function ChatWidget() {
               </div>
               <button
                 onClick={handleClose}
-                className="w-7 h-7 flex items-center justify-center rounded-full text-[#555] hover:text-white transition-colors"
+                className="w-11 h-11 flex items-center justify-center rounded-full text-[#555] hover:text-white transition-colors"
                 style={{ background: "rgba(255,255,255,0.04)" }}
                 aria-label="Close chat"
               >
@@ -248,13 +264,13 @@ export default function ChatWidget() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="px-4 pb-2 flex flex-wrap gap-2 shrink-0"
+                  className="px-4 pb-2 flex max-h-[30%] overflow-y-auto flex-wrap gap-2 shrink-0"
                 >
                   {STARTER_PROMPTS.map((prompt) => (
                     <button
                       key={prompt}
                       onClick={() => sendMessage(prompt)}
-                      className="text-xs px-3 py-1.5 rounded-full text-[#86868b] hover:text-white transition-colors"
+                      className="min-h-11 text-xs px-3 py-1.5 rounded-full text-[#86868b] hover:text-white transition-colors"
                       style={{
                         background: "rgba(255,255,255,0.05)",
                         border: "1px solid rgba(255,255,255,0.09)",
@@ -293,14 +309,14 @@ export default function ChatWidget() {
                   }}
                   placeholder="Ask anything about Mohammad..."
                   disabled={loading}
-                  className="flex-1 bg-transparent text-sm text-white placeholder-[#3a3a3a] outline-none min-w-0"
+                  className="flex-1 bg-transparent text-base sm:text-sm text-white placeholder-[#86868b] outline-none min-w-0"
                   style={{ fontFamily: "inherit" }}
                   aria-label="Chat input"
                 />
                 <button
                   type="submit"
                   disabled={!input.trim() || loading}
-                  className="w-7 h-7 flex items-center justify-center rounded-full transition-colors shrink-0 disabled:opacity-40"
+                  className="w-11 h-11 flex items-center justify-center rounded-full transition-colors shrink-0 disabled:opacity-40"
                   style={{
                     background: input.trim() && !loading ? "#0071e3" : "rgba(255,255,255,0.08)",
                   }}
@@ -319,7 +335,7 @@ export default function ChatWidget() {
 
       {/* ── First-visit tooltip ─────────────────────────────────── */}
       <AnimatePresence>
-        {showTooltip && !open && (
+        {showTooltip && !open && !heroCtaVisible && (
           <motion.div
             initial={{ opacity: 0, x: 12, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -328,7 +344,7 @@ export default function ChatWidget() {
             className="fixed bottom-8 right-24 z-50 pointer-events-none"
           >
             <div
-              className="relative px-4 py-2.5 rounded-2xl text-sm font-medium text-white whitespace-nowrap"
+              className="relative px-4 py-2.5 rounded-2xl text-sm font-medium text-white max-w-[calc(100vw_-_7rem)]"
               style={{
                 background: "#0d0d0d",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -355,7 +371,8 @@ export default function ChatWidget() {
         initial={{ opacity: 0, scale: 0.7 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, delay: 1.8, ease: [0.22, 1, 0.36, 1] }}
-        className="fixed bottom-5 right-5 z-50"
+        className={`fixed right-4 sm:right-5 z-50 ${heroCtaVisible && !open ? "hidden md:block" : ""}`}
+        style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
       >
         {/* Pulsing halo — only when closed. Two rings, phase-offset for continuous breath. */}
         {!open && (
@@ -429,6 +446,6 @@ export default function ChatWidget() {
           </AnimatePresence>
         </motion.button>
       </motion.div>
-    </>
+    </div>
   );
 }

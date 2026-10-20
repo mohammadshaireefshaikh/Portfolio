@@ -1,27 +1,18 @@
 import { motion } from "framer-motion";
-import AnimatedSection, { AnimatedItem } from "./AnimatedSection";
+import AnimatedSection, { AnimatedItem, itemVariants } from "./AnimatedSection";
 import { experience } from "../data/portfolio";
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
-  },
-};
 
 function ExperienceCard({ role, company, period, location, description, highlights, badge, index }) {
   return (
     <motion.div
-      variants={cardVariants}
+      variants={itemVariants}
+      custom={index * 0.06}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-50px" }}
-      transition={{ delay: index * 0.06 }}
-      className="relative flex gap-6"
+      className="relative flex gap-3 sm:gap-6"
     >
-      <div className="flex flex-col items-center shrink-0 w-6">
+      <div className="flex flex-col items-center shrink-0 w-4 sm:w-6">
         <div
           className="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0"
           style={{ background: "#0071e3" }}
@@ -35,7 +26,7 @@ function ExperienceCard({ role, company, period, location, description, highligh
       </div>
 
       <div
-        className="flex-1 mb-10 rounded-2xl p-6 md:p-7"
+        className="min-w-0 flex-1 mb-10 rounded-2xl p-4 sm:p-6 md:p-7"
         style={{
           background: "rgba(255,255,255,0.03)",
           border: "1px solid rgba(255,255,255,0.06)",
@@ -47,19 +38,19 @@ function ExperienceCard({ role, company, period, location, description, highligh
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div>
             <p className="text-base font-semibold text-white tracking-tight">{role}</p>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex flex-wrap items-center gap-2 mt-1">
               <p className="text-sm font-medium text-[#0071e3]">{company}</p>
               {location && (
                 <>
                   <span className="text-[#333]">·</span>
-                  <p className="text-xs text-[#444]">{location}</p>
+                  <p className="text-xs text-[#86868b]">{location}</p>
                 </>
               )}
             </div>
           </div>
           <div className="flex flex-col items-end gap-1.5">
             <span
-              className="text-xs text-[#555] font-medium tabular-nums px-2.5 py-1 rounded-lg"
+              className="text-xs text-[#86868b] font-medium tabular-nums px-2.5 py-1 rounded-lg"
               style={{
                 background: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(255,255,255,0.06)",
@@ -82,13 +73,13 @@ function ExperienceCard({ role, company, period, location, description, highligh
           </div>
         </div>
 
-        <p className="text-sm text-[#6e6e73] leading-relaxed mb-5">{description}</p>
+        <p className="text-sm text-[#9a9aa1] leading-relaxed mb-5">{description}</p>
 
         <ul className="flex flex-col gap-2">
           {highlights.map((h) => (
             <li
               key={h}
-              className="flex items-start gap-2.5 text-xs text-[#555]"
+              className="flex items-start gap-2.5 text-xs text-[#86868b]"
             >
               <span
                 className="mt-1.5 w-1 h-1 rounded-full shrink-0"
@@ -105,7 +96,7 @@ function ExperienceCard({ role, company, period, location, description, highligh
 
 export default function Experience() {
   return (
-    <section id="experience" className="py-28 px-6 border-t border-white/[0.06]">
+    <section id="experience" className="py-16 sm:py-28 px-5 sm:px-6 border-t border-white/[0.06]">
       <div className="max-w-3xl mx-auto">
         <AnimatedSection className="mb-16">
           <AnimatedItem>

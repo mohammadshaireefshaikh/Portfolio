@@ -1,24 +1,25 @@
 import { motion } from "framer-motion";
-import AnimatedSection, { AnimatedItem } from "./AnimatedSection";
+import AnimatedSection, { AnimatedItem, itemVariants } from "./AnimatedSection";
 import { skills } from "../data/portfolio";
 
 function SkillGroup({ category, items, groupIndex }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      variants={itemVariants}
+      custom={groupIndex * 0.08}
+      initial="hidden"
+      whileInView="visible"
       viewport={{ once: true, margin: "-40px" }}
-      transition={{ duration: 0.6, delay: groupIndex * 0.08, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-col gap-4"
     >
-      <p className="text-xs font-medium tracking-[0.18em] uppercase text-[#444]">
+      <p className="text-xs font-medium tracking-[0.18em] uppercase text-[#86868b]">
         {category}
       </p>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
           <span
             key={item}
-            className="px-3 py-1.5 text-sm text-[#6e6e73] rounded-xl"
+            className="px-3 py-1.5 text-sm text-[#9a9aa1] rounded-xl"
             style={{
               background: "rgba(255,255,255,0.04)",
               border: "1px solid rgba(255,255,255,0.07)",
@@ -34,7 +35,7 @@ function SkillGroup({ category, items, groupIndex }) {
 
 export default function Skills() {
   return (
-    <section id="skills" className="py-28 px-6 border-t border-white/[0.06]">
+    <section id="skills" className="py-16 sm:py-28 px-5 sm:px-6 border-t border-white/[0.06]">
       <div className="max-w-5xl mx-auto">
         <AnimatedSection className="mb-16">
           <AnimatedItem>

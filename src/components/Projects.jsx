@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, LayoutGrid, List as ListIcon } from "lucide-react";
-import AnimatedSection, { AnimatedItem } from "./AnimatedSection";
+import AnimatedSection, { AnimatedItem, itemVariants } from "./AnimatedSection";
 import ProjectDetail from "./ProjectDetail";
 import { projects } from "../data/portfolio";
 
@@ -12,15 +12,6 @@ const mono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
 
 // Pad a 1-based index to a two-digit mono label (01, 02, …)
 const pad2 = (n) => String(n + 1).padStart(2, "0");
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.55, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] },
-  }),
-};
 
 // Max tilt in degrees. Small by design — depth cue, not toy.
 const TILT_MAX = 6;
@@ -54,8 +45,8 @@ function ProjectCard({ project, index, onOpen }) {
 
   return (
     <motion.div
-      custom={index}
-      variants={cardVariants}
+      custom={Math.min(index, 4) * 0.06}
+      variants={itemVariants}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-60px" }}
@@ -89,21 +80,21 @@ function ProjectCard({ project, index, onOpen }) {
       <div className="flex flex-col flex-1 p-6">
         <div className="flex items-start justify-between gap-3 mb-4">
           <span
-            className="text-[10px] tracking-[0.15em] uppercase text-[#555] group-hover:text-[#2997ff] transition-colors duration-200"
+            className="text-[10px] tracking-[0.15em] uppercase text-[#86868b] group-hover:text-[#2997ff] transition-colors duration-200"
             style={mono}
           >
             {pad2(index)} / {project.tech[0]?.toUpperCase()} · {project.year}
           </span>
           <ArrowUpRight
             size={16}
-            className="text-[#444] transition-all duration-300 ease-out group-hover:text-[#2997ff] group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+            className="text-[#86868b] transition-all duration-300 ease-out group-hover:text-[#2997ff] group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
           />
         </div>
 
         <h3 className="text-lg font-semibold text-white tracking-tight mb-3">
           {project.title}
         </h3>
-        <p className="text-sm text-[#6e6e73] leading-relaxed mb-4 flex-1">
+        <p className="text-sm text-[#9a9aa1] leading-relaxed mb-4 flex-1">
           {project.description}
         </p>
 
@@ -127,7 +118,7 @@ function ProjectCard({ project, index, onOpen }) {
             </span>
           ))}
           {project.tech.length > 4 && (
-            <span className="px-2 py-0.5 text-[11px] font-medium text-[#555]">
+            <span className="px-2 py-0.5 text-[11px] font-medium text-[#86868b]">
               +{project.tech.length - 4}
             </span>
           )}
@@ -143,29 +134,29 @@ function ProjectRow({ project, index, onOpen }) {
     <motion.button
       type="button"
       onClick={onOpen}
-      custom={index}
-      variants={cardVariants}
+      custom={Math.min(index, 4) * 0.06}
+      variants={itemVariants}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-40px" }}
-      className="group grid grid-cols-[auto_1fr_auto] md:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.5fr)_auto] items-center gap-4 md:gap-6 w-full text-left px-4 py-4 border-t border-white/[0.06] hover:bg-white/[0.025] transition-colors duration-150"
+      className="group grid grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.5fr)_auto] items-center gap-4 md:gap-6 w-full text-left px-4 py-4 border-t border-white/[0.06] hover:bg-white/[0.025] transition-colors duration-150"
       style={mono}
       aria-label={`Open details for ${project.title}`}
     >
-      <span className="text-[11px] tracking-[0.15em] text-[#555] group-hover:text-[#2997ff] transition-colors duration-150">
+      <span className="text-[11px] tracking-[0.15em] text-[#86868b] group-hover:text-[#2997ff] transition-colors duration-150">
         {pad2(index)}
       </span>
       <span className="text-sm text-white truncate font-sans font-medium tracking-tight">
         {project.title}
       </span>
-      <span className="hidden md:inline text-[11px] text-[#60605c] truncate tracking-[0.05em]">
+      <span className="hidden md:inline text-[11px] text-[#86868b] truncate tracking-[0.05em]">
         {project.tech.slice(0, 3).join(" · ")}
       </span>
-      <span className="flex items-center gap-3 text-[11px] text-[#60605c] tracking-[0.1em]">
+      <span className="flex items-center gap-3 text-[11px] text-[#86868b] tracking-[0.1em]">
         <span>{project.year}</span>
         <ArrowUpRight
           size={14}
-          className="text-[#444] group-hover:text-[#2997ff] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all duration-200"
+          className="text-[#86868b] group-hover:text-[#2997ff] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all duration-200"
         />
       </span>
     </motion.button>
@@ -178,12 +169,12 @@ export default function Projects() {
 
   return (
     <>
-      <section id="projects" className="py-28 px-6 border-t border-white/[0.06]">
+      <section id="projects" className="py-16 sm:py-28 px-5 sm:px-6 border-t border-white/[0.06]">
         <div className="max-w-6xl mx-auto">
           <AnimatedSection className="mb-10">
             <AnimatedItem>
               <p
-                className="text-[10px] font-medium tracking-[0.2em] uppercase text-[#555] mb-3"
+                className="text-[10px] font-medium tracking-[0.2em] uppercase text-[#86868b] mb-3"
                 style={mono}
               >
                 [03 / PROJECTS]
@@ -195,7 +186,7 @@ export default function Projects() {
               </h2>
             </AnimatedItem>
             <AnimatedItem>
-              <p className="mt-4 text-sm text-[#6e6e73] max-w-md">
+              <p className="mt-4 text-sm text-[#9a9aa1] max-w-md">
                 Tap any project for the full story.
               </p>
             </AnimatedItem>
@@ -204,7 +195,7 @@ export default function Projects() {
           {/* View toggle */}
           <div className="flex items-center justify-between mb-6">
             <p
-              className="text-[10px] tracking-[0.15em] uppercase text-[#60605c]"
+              className="text-[10px] tracking-[0.15em] uppercase text-[#86868b]"
               style={mono}
             >
               {projects.length.toString().padStart(2, "0")} ENTRIES
@@ -217,8 +208,8 @@ export default function Projects() {
                 onClick={() => setView("grid")}
                 aria-pressed={view === "grid"}
                 aria-label="Grid view"
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] transition-colors duration-150 ${
-                  view === "grid" ? "text-white bg-white/[0.08]" : "text-[#60605c] hover:text-white"
+                className={`inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] transition-colors duration-150 ${
+                  view === "grid" ? "text-white bg-white/[0.08]" : "text-[#86868b] hover:text-white"
                 }`}
                 style={mono}
               >
@@ -228,8 +219,8 @@ export default function Projects() {
                 onClick={() => setView("list")}
                 aria-pressed={view === "list"}
                 aria-label="List view"
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] transition-colors duration-150 ${
-                  view === "list" ? "text-white bg-white/[0.08]" : "text-[#60605c] hover:text-white"
+                className={`inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] transition-colors duration-150 ${
+                  view === "list" ? "text-white bg-white/[0.08]" : "text-[#86868b] hover:text-white"
                 }`}
                 style={mono}
               >
@@ -256,7 +247,7 @@ export default function Projects() {
             >
               {/* Header row */}
               <div
-                className="grid grid-cols-[auto_1fr_auto] md:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.5fr)_auto] items-center gap-4 md:gap-6 px-4 py-3 text-[10px] tracking-[0.15em] uppercase text-[#555]"
+                className="grid grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.5fr)_auto] items-center gap-4 md:gap-6 px-4 py-3 text-[10px] tracking-[0.15em] uppercase text-[#86868b]"
                 style={{ ...mono, background: "rgba(255,255,255,0.02)" }}
               >
                 <span>#</span>

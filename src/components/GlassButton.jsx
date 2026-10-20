@@ -10,7 +10,7 @@ export default function GlassButton({
   ...props
 }) {
   const base =
-    "relative inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-medium transition-colors duration-200 cursor-pointer select-none";
+    "relative inline-flex min-h-11 min-w-0 items-center justify-center gap-2 whitespace-nowrap px-4 sm:px-6 py-3 rounded-full text-sm font-medium transition-colors duration-200 cursor-pointer select-none";
 
   const variants = {
     primary: "bg-[#0071e3] hover:bg-[#0077ed] text-white border border-transparent",
