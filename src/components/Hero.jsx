@@ -1,9 +1,10 @@
-import { lazy, Suspense } from "react";
-import { motion } from "framer-motion";
+import { lazy, Suspense, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDown } from "lucide-react";
 import { GitHubIcon, LinkedInIcon } from "./Icons";
 import GlassButton from "./GlassButton";
 import HeroChatCTA from "./HeroChatCTA";
+import LoadingOverlay from "./LoadingOverlay";
 import { personal } from "../data/portfolio";
 
 // Lazy-load Three.js scene so first paint isn't blocked by ~400KB of 3D code
@@ -12,20 +13,24 @@ const ConsoleScene = lazy(() => import("./ConsoleScene"));
 const containerVariants = {
   hidden: {},
   visible: {
-    transition: { staggerChildren: 0.1, delayChildren: 0.1 },
+    transition: { staggerChildren: 0.08, delayChildren: 0.2 },
   },
 };
 
+// Slide-down reveal (ClickFunnels-style progressive reveal)
 const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: -24, filter: "blur(4px)" },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+    filter: "blur(0px)",
+    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
 export default function Hero() {
+  const [entered, setEntered] = useState(false);
+
   const scrollTo = (id) =>
     document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
 
@@ -38,13 +43,16 @@ export default function Hero() {
         </Suspense>
       </div>
 
+      {/* Loading screen (sits above everything until the user clicks ENTER) */}
+      {!entered && <LoadingOverlay onEnter={() => setEntered(true)} />}
+
       {/* Text block — floats over the bottom of the hero */}
       <div className="relative z-10 min-h-screen max-w-6xl mx-auto px-6 pt-20 pb-10 pointer-events-none flex flex-col justify-end">
         <motion.div
           className="pointer-events-auto w-full md:max-w-xl md:text-left text-center"
           variants={containerVariants}
           initial="hidden"
-          animate="visible"
+          animate={entered ? "visible" : "hidden"}
           style={{
             textShadow: "0 2px 24px rgba(0,0,0,0.75)",
           }}

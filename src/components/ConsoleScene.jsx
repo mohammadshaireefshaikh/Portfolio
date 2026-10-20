@@ -533,10 +533,15 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
     group.current.scale.set(next, next, next);
   });
 
+  // Replace cursor with the "Click to play" label while hovered in idle mode
   useEffect(() => {
     if (mode !== "idle") return;
-    document.body.style.cursor = hovered ? "pointer" : "";
-    return () => { document.body.style.cursor = ""; };
+    document.body.style.cursor = hovered ? "none" : "";
+    window.dispatchEvent(new CustomEvent("console-hover", { detail: hovered }));
+    return () => {
+      document.body.style.cursor = "";
+      window.dispatchEvent(new CustomEvent("console-hover", { detail: false }));
+    };
   }, [hovered, mode]);
 
   const bodyColor = "#1a1a1c";
@@ -597,6 +602,272 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
       <Button position={[0, 0.26, 0.75]} color="#f5c518" />
       <Button position={[0.25, 0.26, 0.75]} color="#30c764" />
       <Button position={[0, 0.26, 0.5]} color={accent} />
+    </group>
+  );
+}
+
+// ─── Phase 3 furniture ────────────────────────────────────────
+
+function Speaker({ position, rotation = [0, 0, 0], accent = "#f5a860" }) {
+  const grill = "#111113";
+  const body = "#1a1a1e";
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Stand */}
+      <mesh position={[0, 0.05, 0]} castShadow>
+        <boxGeometry args={[0.52, 0.1, 0.5]} />
+        <meshStandardMaterial color="#0e0e10" roughness={0.9} />
+      </mesh>
+      {/* Cabinet */}
+      <mesh position={[0, 0.75, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.42, 1.3, 0.38]} />
+        <meshStandardMaterial color={body} roughness={0.85} />
+      </mesh>
+      {/* Tweeter */}
+      <mesh position={[0, 1.2, 0.2]}>
+        <cylinderGeometry args={[0.07, 0.07, 0.02, 20]} />
+        <meshStandardMaterial color={grill} roughness={0.9} />
+      </mesh>
+      {/* Woofer */}
+      <mesh position={[0, 0.75, 0.2]}>
+        <cylinderGeometry args={[0.14, 0.14, 0.025, 24]} />
+        <meshStandardMaterial color={grill} roughness={0.9} />
+      </mesh>
+      {/* Woofer centre dome */}
+      <mesh position={[0, 0.75, 0.215]}>
+        <sphereGeometry args={[0.05, 12, 12]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.5} metalness={0.3} />
+      </mesh>
+      {/* Power LED */}
+      <mesh position={[0.15, 0.4, 0.2]}>
+        <sphereGeometry args={[0.015, 8, 8]} />
+        <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={2} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+function CatHouse({ position, rotation = [0, 0, 0] }) {
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Body */}
+      <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.7, 0.6, 0.6]} />
+        <meshStandardMaterial color="#6a4a2a" roughness={0.95} />
+      </mesh>
+      {/* Round entrance (dark hole) */}
+      <mesh position={[0, 0.26, 0.305]}>
+        <circleGeometry args={[0.17, 24]} />
+        <meshStandardMaterial color="#0a0906" roughness={1} />
+      </mesh>
+      {/* Pitched roof — two tilted boxes */}
+      <mesh position={[0, 0.72, 0]} rotation={[0, 0, 0]} castShadow>
+        <boxGeometry args={[0.86, 0.04, 0.72]} />
+        <meshStandardMaterial color="#4a3220" roughness={0.9} />
+      </mesh>
+      <mesh position={[-0.22, 0.9, 0]} rotation={[0, 0, Math.PI / 4]} castShadow>
+        <boxGeometry args={[0.5, 0.04, 0.72]} />
+        <meshStandardMaterial color="#3a2718" roughness={0.9} />
+      </mesh>
+      <mesh position={[0.22, 0.9, 0]} rotation={[0, 0, -Math.PI / 4]} castShadow>
+        <boxGeometry args={[0.5, 0.04, 0.72]} />
+        <meshStandardMaterial color="#3a2718" roughness={0.9} />
+      </mesh>
+      {/* Pet-tag plate */}
+      <mesh position={[0, 0.55, 0.306]}>
+        <boxGeometry args={[0.26, 0.07, 0.004]} />
+        <meshStandardMaterial color="#f5c518" roughness={0.6} metalness={0.2} />
+      </mesh>
+    </group>
+  );
+}
+
+function Cat({ position, rotation = [0, 0, 0], color = "#2a2a2c" }) {
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Body */}
+      <mesh position={[0, 0.17, 0]} castShadow>
+        <boxGeometry args={[0.22, 0.3, 0.28]} />
+        <meshStandardMaterial color={color} roughness={0.95} />
+      </mesh>
+      {/* Head */}
+      <mesh position={[0, 0.4, 0.08]} castShadow>
+        <boxGeometry args={[0.2, 0.18, 0.2]} />
+        <meshStandardMaterial color={color} roughness={0.95} />
+      </mesh>
+      {/* Ears */}
+      <mesh position={[-0.07, 0.53, 0.08]} rotation={[0, 0, 0.2]}>
+        <coneGeometry args={[0.04, 0.1, 4]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      <mesh position={[0.07, 0.53, 0.08]} rotation={[0, 0, -0.2]}>
+        <coneGeometry args={[0.04, 0.1, 4]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      {/* Eyes */}
+      <mesh position={[-0.045, 0.42, 0.18]}>
+        <sphereGeometry args={[0.013, 8, 8]} />
+        <meshStandardMaterial color="#8bff30" emissive="#8bff30" emissiveIntensity={1.5} toneMapped={false} />
+      </mesh>
+      <mesh position={[0.045, 0.42, 0.18]}>
+        <sphereGeometry args={[0.013, 8, 8]} />
+        <meshStandardMaterial color="#8bff30" emissive="#8bff30" emissiveIntensity={1.5} toneMapped={false} />
+      </mesh>
+      {/* Tail curled around */}
+      <mesh position={[0.13, 0.1, 0.14]} rotation={[0, 0.5, 0.4]}>
+        <cylinderGeometry args={[0.02, 0.02, 0.3, 8]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+    </group>
+  );
+}
+
+function PopcornMachine({ position, rotation = [0, 0, 0] }) {
+  const red = "#c42c2c";
+  const gold = "#d7a84a";
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Wheels */}
+      {[-0.3, 0.3].map((x, i) => (
+        <mesh key={i} position={[x, 0.08, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.08, 0.08, 0.08, 16]} />
+          <meshStandardMaterial color="#111" />
+        </mesh>
+      ))}
+      {/* Cart base */}
+      <mesh position={[0, 0.22, 0]} castShadow>
+        <boxGeometry args={[0.85, 0.2, 0.55]} />
+        <meshStandardMaterial color={red} roughness={0.6} />
+      </mesh>
+      {/* Lower cabinet door */}
+      <mesh position={[0, 0.22, 0.278]}>
+        <planeGeometry args={[0.6, 0.14]} />
+        <meshStandardMaterial color="#2a0e0e" />
+      </mesh>
+      {/* Glass box */}
+      <mesh position={[0, 0.72, 0]} castShadow>
+        <boxGeometry args={[0.78, 0.7, 0.48]} />
+        <meshStandardMaterial color="#ffffff" transparent opacity={0.15} roughness={0.2} metalness={0.1} />
+      </mesh>
+      {/* Glass top rim */}
+      <mesh position={[0, 1.07, 0]}>
+        <boxGeometry args={[0.84, 0.06, 0.52]} />
+        <meshStandardMaterial color={red} />
+      </mesh>
+      {/* Popcorn (two spheres clumped) */}
+      <mesh position={[-0.12, 0.72, 0]}>
+        <sphereGeometry args={[0.22, 12, 12]} />
+        <meshStandardMaterial color="#fff2b8" emissive="#fff2b8" emissiveIntensity={0.1} roughness={0.9} />
+      </mesh>
+      <mesh position={[0.14, 0.78, 0.06]}>
+        <sphereGeometry args={[0.18, 12, 12]} />
+        <meshStandardMaterial color="#fff6c8" emissive="#fff6c8" emissiveIntensity={0.1} roughness={0.9} />
+      </mesh>
+      {/* Top crown */}
+      <mesh position={[0, 1.18, 0]} castShadow>
+        <boxGeometry args={[0.85, 0.18, 0.5]} />
+        <meshStandardMaterial color={red} roughness={0.6} />
+      </mesh>
+      {/* "POPCORN" sign — gold stripe */}
+      <mesh position={[0, 1.18, 0.255]}>
+        <planeGeometry args={[0.7, 0.08]} />
+        <meshStandardMaterial color={gold} emissive={gold} emissiveIntensity={0.3} toneMapped={false} />
+      </mesh>
+      {/* Warm top light */}
+      <pointLight position={[0, 0.9, 0]} color="#ffcc80" intensity={0.7} distance={2.5} decay={2} />
+    </group>
+  );
+}
+
+function AnimeShelf({ wallX, y = 1.3 }) {
+  const shelfLen = 2.2;
+  const colors = ["#f5c518", "#30d158", "#ff2d55", "#0a84ff", "#bf5af2"];
+  return (
+    <group position={[wallX, y, -2.5]} rotation={[0, -Math.sign(wallX) * Math.PI / 2, 0]}>
+      {/* Plank */}
+      <mesh position={[0, 0, 0.08]} castShadow receiveShadow>
+        <boxGeometry args={[shelfLen, 0.04, 0.22]} />
+        <meshStandardMaterial color="#1a1a1e" roughness={0.9} />
+      </mesh>
+      {/* Figures */}
+      {colors.map((c, i) => {
+        const x = (i / (colors.length - 1) - 0.5) * (shelfLen - 0.4);
+        return (
+          <group key={i} position={[x, 0.08, 0.08]}>
+            {/* Legs */}
+            <mesh position={[0, 0.08, 0]} castShadow>
+              <boxGeometry args={[0.1, 0.14, 0.08]} />
+              <meshStandardMaterial color="#1a1515" />
+            </mesh>
+            {/* Body */}
+            <mesh position={[0, 0.24, 0]} castShadow>
+              <boxGeometry args={[0.12, 0.16, 0.09]} />
+              <meshStandardMaterial color={c} roughness={0.6} metalness={0.2} />
+            </mesh>
+            {/* Head */}
+            <mesh position={[0, 0.38, 0]} castShadow>
+              <boxGeometry args={[0.1, 0.1, 0.09]} />
+              <meshStandardMaterial color="#f3d2a0" roughness={0.95} />
+            </mesh>
+            {/* Hair spike */}
+            <mesh position={[0, 0.46, 0]} rotation={[0, 0, i * 0.3]}>
+              <coneGeometry args={[0.07, 0.08, 4]} />
+              <meshStandardMaterial color={c} roughness={0.7} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function Window({ x = -2.5, y = 1.7 }) {
+  // Faux back-wall window glowing like a nighttime city view
+  return (
+    <group position={[x, y, -ROOM.size / 2 + 0.02]}>
+      {/* Frame */}
+      <mesh castShadow>
+        <boxGeometry args={[1.6, 1.2, 0.08]} />
+        <meshStandardMaterial color="#0a0a0e" roughness={0.6} />
+      </mesh>
+      {/* Glowing scene */}
+      <mesh position={[0, 0, 0.045]}>
+        <planeGeometry args={[1.45, 1.05]} />
+        <meshStandardMaterial
+          color="#1a2a4a"
+          emissive="#2a4080"
+          emissiveIntensity={0.6}
+          toneMapped={false}
+        />
+      </mesh>
+      {/* City-light dots to sell the view */}
+      {Array.from({ length: 18 }).map((_, i) => {
+        const px = ((i * 97) % 100 - 50) / 100 * 1.3;
+        const py = (((i * 53) % 100) - 50) / 100 * 0.85;
+        const warm = i % 3 === 0;
+        return (
+          <mesh key={i} position={[px, py, 0.05]}>
+            <boxGeometry args={[0.015, 0.015, 0.001]} />
+            <meshStandardMaterial
+              color={warm ? "#ffcf90" : "#80b0ff"}
+              emissive={warm ? "#ffcf90" : "#80b0ff"}
+              emissiveIntensity={2}
+              toneMapped={false}
+            />
+          </mesh>
+        );
+      })}
+      {/* Window cross-mullion */}
+      <mesh position={[0, 0, 0.055]}>
+        <boxGeometry args={[1.45, 0.02, 0.001]} />
+        <meshStandardMaterial color="#0a0a0e" />
+      </mesh>
+      <mesh position={[0, 0, 0.055]}>
+        <boxGeometry args={[0.02, 1.05, 0.001]} />
+        <meshStandardMaterial color="#0a0a0e" />
+      </mesh>
+      {/* Soft bluish spill into room */}
+      <pointLight position={[0, 0, 0.8]} color="#4080ff" intensity={0.5} distance={3} decay={2} />
     </group>
   );
 }
@@ -921,17 +1192,29 @@ function RoomShell() {
       </mesh>
 
       {/* ─── Phase 2 furniture ─── */}
-      {/* Pool table — far-left of room, long side facing camera */}
       <PoolTable position={[-3.2, floorY, 1.4]} rotation={[0, 0.25, 0]} />
-
-      {/* Sofa — right of cabinet, angled toward it */}
       <Sofa position={[3.0, floorY, 1.3]} rotation={[0, -Math.PI / 3, 0]} />
-
-      {/* Hot Wheels shelf — right wall above the sofa */}
       <HotWheelsShelf wallX={half - 0.02} y={1.4} />
-
-      {/* One Piece poster — back wall, right of the arcade */}
       <OnePiecePoster x={2.2} y={1.4} />
+
+      {/* ─── Phase 3 furniture ─── */}
+      {/* 3 corner floor speakers (per sketch) */}
+      <Speaker position={[-half + 0.5, floorY, half - 0.5]} rotation={[0, Math.PI / 5, 0]} />
+      <Speaker position={[half - 0.5, floorY, half - 0.5]} rotation={[0, -Math.PI / 5, 0]} />
+      <Speaker position={[-half + 0.5, floorY, -half + 0.5]} rotation={[0, 2 * Math.PI / 3, 0]} />
+
+      {/* Cat house + cat, tucked right of the sofa */}
+      <CatHouse position={[4.1, floorY, -1.4]} rotation={[0, -Math.PI / 3, 0]} />
+      <Cat position={[3.6, floorY, -0.8]} rotation={[0, -Math.PI / 2.5, 0]} />
+
+      {/* Popcorn machine — left wall between pool table and corner */}
+      <PopcornMachine position={[-half + 0.8, floorY, -1.0]} rotation={[0, Math.PI / 2.5, 0]} />
+
+      {/* Anime figure shelf — right wall, further back than Hot Wheels */}
+      <AnimeShelf wallX={half - 0.02} y={2.2} />
+
+      {/* Window — back wall, left of arcade (balances One Piece on the right) */}
+      <Window x={-2.5} y={1.7} />
     </group>
   );
 }
@@ -1127,14 +1410,7 @@ export default function ConsoleScene() {
         </Suspense>
       </Canvas>
 
-      {mode === "idle" && (
-        <div
-          className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-3 text-[10px] tracking-[0.2em] uppercase text-[#60605c]"
-          style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
-        >
-          CLICK CONSOLE TO PLAY
-        </div>
-      )}
+      {mode === "idle" && <HoverLabel />}
 
       {inGame && (
         <>
@@ -1350,6 +1626,51 @@ export default function ConsoleScene() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * Replaces the cursor with a "Click to play" badge while the user is
+ * hovering the arcade cabinet in idle mode. Listens for the
+ * 'console-hover' CustomEvent dispatched by the Console component.
+ */
+function HoverLabel() {
+  const [visible, setVisible] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const onHover = (e) => setVisible(!!e.detail);
+    const onMove = (e) => setPos({ x: e.clientX, y: e.clientY });
+    window.addEventListener("console-hover", onHover);
+    window.addEventListener("mousemove", onMove);
+    return () => {
+      window.removeEventListener("console-hover", onHover);
+      window.removeEventListener("mousemove", onMove);
+    };
+  }, []);
+
+  if (!visible) return null;
+  return (
+    <div
+      className="pointer-events-none fixed z-[95]"
+      style={{
+        left: pos.x,
+        top: pos.y,
+        transform: "translate(18px, -10px)",
+        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+      }}
+    >
+      <div
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] tracking-[0.15em] uppercase text-white"
+        style={{
+          background: "#0071e3",
+          boxShadow: "0 4px 18px rgba(0,113,227,0.5)",
+        }}
+      >
+        <span>▸</span>
+        Click to play
+      </div>
     </div>
   );
 }
