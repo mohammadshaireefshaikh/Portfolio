@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="1024" viewBox="0 0 480 1024">
+  <defs>
+    <linearGradient id="red" x2=".8" y2="1"><stop stop-color="#13090c"/><stop offset=".6" stop-color="#571417"/><stop offset="1" stop-color="#19090b"/></linearGradient>
+    <linearGradient id="gold" x2="1" y2=".4"><stop stop-color="#a76622"/><stop offset=".45" stop-color="#ffe69a"/><stop offset="1" stop-color="#cc8a2e"/></linearGradient>
+  </defs>
+  <path fill="url(#red)" d="M0 0h480v1024H0z"/>
+  <path d="M32 1024V32h416v992" fill="none" stroke="#ba292f" stroke-width="8"/>
+  <circle cx="240" cy="160" r="88" fill="#100e0d" stroke="url(#gold)" stroke-width="6"/>
+  <path d="M184 193q-29-54 20-87l56 5-18 21 37 12-26 14-29-7q-27 17-8 40l34-8 24 20q-58 37-90-10" fill="url(#gold)"/>
+  <path d="M99 879c230-14 286-141 118-246C30 517 49 367 237 338c135-21 175 74 94 113-44 21-98 2-81-33 9-19 35-15 37 2" fill="none" stroke="#2a0e0d" stroke-width="79"/>
+  <path d="M99 879c230-14 286-141 118-246C30 517 49 367 237 338c135-21 175 74 94 113-44 21-98 2-81-33 9-19 35-15 37 2" fill="none" stroke="url(#gold)" stroke-width="60"/>
+  <path d="m116 594-41-28 11 49-28 11 47 21-4 43 48-20m127 69 47-19-17 45 38 23-51 10-14 47-29-34" fill="url(#gold)" stroke="#8f5422" stroke-width="3"/>
+  <path d="m134 797 65-37 37 10 50-42-5 49 49 21-53 26-10 55-44-35-51 17-43-26-36 6 28-26-15-31z" fill="url(#gold)" stroke="#73401d" stroke-width="4"/>
+  <path d="m157 807 45-10 23 17-39 9zm34 34 37-14 32 10-20 12z" fill="#24120d"/>
+  <path d="m132 777-42-50 58 30m98 5 38-62-10 70M138 839l-41 27m80-14-38 38" fill="none" stroke="#e8b955" stroke-width="8"/>
+  <path d="m114 502 30-14m-23 47 30-15m-9 44 29-18m10 45 24-21m13 44 23-22m20 43 22-23m16 46 24-21" fill="none" stroke="#945623" stroke-width="4"/>
+  <text x="240" y="963" fill="#e6bc64" font-family="Georgia,serif" font-size="34" font-weight="bold" text-anchor="middle" letter-spacing="5">FLAPPY</text>
+  <text x="240" y="990" fill="#a87646" font-family="sans-serif" font-size="13" text-anchor="middle" letter-spacing="7">CLASSIC ARCADE</text>
+</svg>

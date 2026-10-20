@@ -1,7 +1,8 @@
 import { Suspense, useRef, useMemo, useEffect, useState } from "react";
 import * as THREE from "three";
+import { createCabinetSides, getArcadeFraming } from "./arcadeGeometry";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Float, ContactShadows, RoundedBox, OrbitControls } from "@react-three/drei";
+import { Float, ContactShadows, RoundedBox, OrbitControls, useTexture } from "@react-three/drei";
 import { X, Volume2, VolumeX, Play, Trophy, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 
@@ -13,10 +14,10 @@ const IDLE_POS = new THREE.Vector3(19.5, 16.5, 21);
 // Look target sits below the floor so the room rides high in the frame and
 // the hero's bottom text strip only covers the plinth / front edge.
 const IDLE_LOOK = new THREE.Vector3(0.2, -0.55, -0.4);
-// Upright café cabinet: screen face sits ~1.4 m up on its front. The cabinet
+// Upright arcade cabinet: screen face sits ~1.46 m up on its front. The cabinet
 // stands against the back wall at CAB_POS; PLAY_LOOK is that screen in world.
 const CAB_POS = [1.3, -0.56, -2.65];
-const PLAY_LOOK = new THREE.Vector3(CAB_POS[0], CAB_POS[1] + 1.42, CAB_POS[2] + 0.2);
+const PLAY_LOOK = new THREE.Vector3(CAB_POS[0], CAB_POS[1] + 1.46, CAB_POS[2] + 0.07);
 const IDLE_FOV = 20;
 const PLAY_FOV = 48; // player POV: wider lens, standing close
 // Idle orbit limits (distance / elevation / swing) so visitors can't dive
@@ -233,7 +234,7 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
   const texture = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 390;
-    canvas.height = 200;
+    canvas.height = 292;
     const t = new THREE.CanvasTexture(canvas);
     t.minFilter = THREE.NearestFilter;
     t.magFilter = THREE.NearestFilter;
@@ -243,7 +244,7 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
 
   const stateRef = useRef({
     canvas: texture.image,
-    bird: { x: 70, y: 100, vy: 0, r: 10 },
+    bird: { x: 70, y: 146, vy: 0, r: 10 },
     pipes: [],
     particles: [],
     spawn: 0,
@@ -256,7 +257,7 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
   function reset() {
     const s = stateRef.current;
     s.bird.x = 70;
-    s.bird.y = 100;
+    s.bird.y = s.canvas.height / 2;
     s.bird.vy = 0;
     s.pipes = [];
     s.spawn = 0;
@@ -409,7 +410,7 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     }
 
     if (!frozen || s.particles.length > 0) {
-      g2d.fillStyle = frozen ? "#555558" : "#2a2a2c";
+      g2d.fillStyle = frozen ? "#777780" : "#f0ca75";
       drawBat(g2d, s.bird.x, s.bird.y, s.frame, 3);
     }
 
@@ -448,21 +449,24 @@ function Marquee({ glow, accent }) {
     c.height = 104;
     const g = c.getContext("2d");
     const grad = g.createLinearGradient(0, 0, 0, c.height);
-    grad.addColorStop(0, "#1e8bff");
-    grad.addColorStop(1, accent);
+    grad.addColorStop(0, "#310a0c");
+    grad.addColorStop(1, "#10090a");
     g.fillStyle = grad;
     g.fillRect(0, 0, c.width, c.height);
     // Subtle scanline band
     g.fillStyle = "rgba(255,255,255,0.08)";
     g.fillRect(0, 0, c.width, 14);
-    g.fillStyle = "#ffffff";
+    g.strokeStyle = accent;
+    g.lineWidth = 7;
+    g.strokeRect(4, 4, c.width - 8, c.height - 8);
+    g.fillStyle = "#f4cf78";
     g.font = "900 64px 'Space Grotesk', system-ui, sans-serif";
     g.textAlign = "center";
     g.textBaseline = "middle";
     g.letterSpacing = "10px";
     g.fillText("FLAPPY", c.width / 2 + 5, c.height / 2 + 2);
     // Pixel bat glyph each side
-    g.fillStyle = "#0b1a33";
+    g.fillStyle = "#d6a64c";
     const drawMiniBat = (cx, cy, cell) => {
       const rows = BAT_FRAMES[0];
       const ox = cx - (rows[0].length * cell) / 2;
@@ -480,8 +484,8 @@ function Marquee({ glow, accent }) {
   }, [accent]);
   useEffect(() => () => tex.dispose(), [tex]);
   return (
-    <mesh position={[0, 1.88, 0.172]}>
-      <planeGeometry args={[0.7, 0.142]} />
+    <mesh position={[0, 1.91, 0.315]}>
+      <planeGeometry args={[0.72, 0.16]} />
       <meshStandardMaterial
         map={tex}
         emissive="#ffffff"
@@ -497,15 +501,9 @@ function Marquee({ glow, accent }) {
 function ScreenFace({ mode, flapRef, onScore, onDeath }) {
   const tex = useFlappyTexture(mode, flapRef, onScore, onDeath);
   return (
-    <mesh position={[0, 0.05, 0.19]}>
-      <planeGeometry args={[1.95, 1.0]} />
-      <meshStandardMaterial
-        map={tex}
-        emissive="#0071e3"
-        emissiveIntensity={mode === "idle" ? 0.25 : 0.1}
-        emissiveMap={tex}
-        toneMapped={false}
-      />
+    <mesh position={[0, 0, 0.025]}>
+      <planeGeometry args={[0.62, 0.465]} />
+      <meshBasicMaterial map={tex} toneMapped={false} />
     </mesh>
   );
 }
@@ -611,12 +609,11 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
   const screenGlow = useRef(null);
   const [hovered, setHovered] = useState(false);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (!group.current) return;
     if (mode === "idle" && !reduceMotion) {
-      // A 1.9 m cabinet shouldn't rock — just a whisper of life
-      const t = state.clock.elapsedTime;
-      group.current.rotation.y = Math.sin(t * 0.4) * 0.02;
+      // A floor-standing cabinet stays planted.
+      group.current.rotation.y = 0;
       group.current.rotation.x = 0;
     } else if (mode === "playing" || mode === "dead") {
       group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, 0, 0.1);
@@ -642,15 +639,15 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
     };
   }, [hovered, mode]);
 
-  const bodyColor = "#23242a";   // matte charcoal cabinet, clinic-style roughness
-  const bodyDark = "#141518";
-  const sideArt = "#0f3f7a";     // deep brand-blue side panels
-  const stickColor = "#2a2a2c";
-  const accent = "#0071e3";
+  const accent = "#d72d35";
+  const bodyDark = "#111113";
   const glow = hovered && mode === "idle";
+  const artwork = useTexture("/img/arcade-dragon.svg");
+  const { profile, sideFace } = useMemo(createCabinetSides, []);
+  useEffect(() => () => sideFace.dispose(), [sideFace]);
 
-  // Upright "café" arcade cabinet, true scale. Local origin = floor, centre.
-  // Faces +z. Overall ≈ 0.76 w × 1.92 h × 0.8 d.
+  // Profiled arcade cabinet. Local origin = floor, centre; faces +z.
+  // Overall approximately 0.86 w × 2.02 h × 0.9 d.
   return (
     <group
       ref={group}
@@ -663,99 +660,84 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
         if (mode === "idle") { ctx(); setMode("playing"); }
       }}
     >
-      {/* Kick plate */}
-      <mesh position={[0, 0.06, 0.02]} castShadow receiveShadow>
-        <boxGeometry args={[0.72, 0.12, 0.76]} />
-        <meshStandardMaterial color={bodyDark} roughness={0.7} />
-      </mesh>
-
-      {/* Lower body (coin-door section) */}
-      <RoundedBox args={[0.76, 0.9, 0.8]} radius={0.02} smoothness={3}
-        position={[0, 0.57, 0]} castShadow receiveShadow>
-        <meshStandardMaterial
-          color={bodyColor} roughness={0.62} metalness={0.05}
-          emissive={glow ? accent : "#000"} emissiveIntensity={glow ? 0.1 : 0}
-        />
+      {/* Raised base and profiled side walls with red edge banding. */}
+      <RoundedBox args={[0.85, 0.3, 0.83]} position={[0, 0.15, 0]} radius={0.008}>
+        <meshStandardMaterial color="#170d10" roughness={0.65} />
       </RoundedBox>
-      {/* Coin door */}
-      <mesh position={[0, 0.5, 0.405]}>
-        <boxGeometry args={[0.3, 0.22, 0.01]} />
-        <meshStandardMaterial color="#5e636e" roughness={0.4} metalness={0.4} />
+      <mesh position={[0, 0.285, 0.421]}>
+        <boxGeometry args={[0.85, 0.018, 0.012]} /><meshStandardMaterial color={accent} />
       </mesh>
-      <mesh position={[-0.06, 0.52, 0.412]}>
-        <boxGeometry args={[0.03, 0.08, 0.004]} />
-        <meshStandardMaterial color="#0b0b0d" />
+      {[-1, 1].map((side) => (
+        <group key={side} position={[side * 0.405, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <mesh castShadow receiveShadow>
+            <extrudeGeometry args={[profile, { depth: 0.028, bevelEnabled: false }]} />
+            <meshStandardMaterial color={accent} roughness={0.5} />
+          </mesh>
+          <mesh geometry={sideFace} position={[0, 0, side < 0 ? 0.029 : -0.001]}>
+            <meshStandardMaterial map={artwork} side={THREE.DoubleSide} roughness={0.7} />
+          </mesh>
+        </group>
+      ))}
+      {/* Rear and lower front; the monitor has no solid block covering its face. */}
+      <mesh position={[0, 1.13, -0.355]} castShadow>
+        <boxGeometry args={[0.79, 1.72, 0.045]} /><meshStandardMaterial color={bodyDark} roughness={0.7} />
       </mesh>
-      <mesh position={[0.06, 0.52, 0.412]}>
-        <boxGeometry args={[0.03, 0.08, 0.004]} />
-        <meshStandardMaterial color="#0b0b0d" />
-      </mesh>
-
-      {/* Control-panel ledge (slopes toward player) */}
-      <group position={[0, 1.02, 0.17]} rotation={[-0.18, 0, 0]}>
-        <RoundedBox args={[0.8, 0.09, 0.42]} radius={0.015} smoothness={3} castShadow receiveShadow>
-          <meshStandardMaterial color={bodyDark} roughness={0.55} />
+      <RoundedBox args={[0.78, 0.64, 0.66]} position={[0, 0.62, -0.02]} radius={0.008} castShadow>
+        <meshStandardMaterial color={bodyDark} roughness={0.65} />
+      </RoundedBox>
+      {/* Moulded twin-slot coin door. */}
+      <RoundedBox args={[0.29, 0.35, 0.025]} position={[0, 0.62, 0.325]} radius={0.025}>
+        <meshStandardMaterial color="#242427" roughness={0.45} metalness={0.3} />
+      </RoundedBox>
+      {[-0.065, 0.065].map((x) => (
+        <group key={x} position={[x, 0.68, 0.342]}>
+          <mesh><boxGeometry args={[0.08, 0.12, 0.015]} /><meshStandardMaterial color="#08080a" /></mesh>
+          <mesh position={[0, 0.01, 0.01]}><boxGeometry args={[0.025, 0.06, 0.008]} /><meshStandardMaterial color={accent} /></mesh>
+          <mesh position={[0, -0.17, 0]}><boxGeometry args={[0.07, 0.055, 0.012]} /><meshStandardMaterial color="#08080a" /></mesh>
+        </group>
+      ))}
+      {/* Two-player deck with small red sticks and five-button clusters. */}
+      <group position={[0, 1.045, 0.235]} rotation={[-0.10, 0, 0]}>
+        <RoundedBox args={[0.86, 0.105, 0.55]} radius={0.008} castShadow>
+          <meshStandardMaterial color="#230e12" roughness={0.35} metalness={0.15} />
         </RoundedBox>
-        {/* Controls — reuse existing stick/button components at half size */}
-        {/* 0.3× keeps the ball tops below the screen's bottom edge from the
-            player POV; sticks pushed outboard so they frame the screen */}
-        <group position={[0, 0.045, 0.02]} scale={0.3}>
-          <JoyStick position={[-0.8, 0, 0.1]} stickColor={stickColor} accent={accent} />
-          <JoyStick position={[0.8, 0, 0.1]} stickColor={stickColor} accent={accent} />
-          <Button position={[-0.22, 0.03, 0.26]} color="#ff4d4d" />
-          <Button position={[0.1, 0.03, 0.26]} color="#f5c518" />
-          <Button position={[0.42, 0.03, 0.26]} color="#30c764" />
-          <Button position={[0.1, 0.03, -0.1]} color={accent} />
-        </group>
-      </group>
-
-      {/* Upper housing (screen box), set back slightly */}
-      <RoundedBox args={[0.76, 0.72, 0.56]} radius={0.02} smoothness={3}
-        position={[0, 1.42, -0.1]} castShadow receiveShadow>
-        <meshStandardMaterial
-          color={bodyColor} roughness={0.62} metalness={0.05}
-          emissive={glow ? accent : "#000"} emissiveIntensity={glow ? 0.1 : 0}
-        />
-      </RoundedBox>
-      {/* Screen bezel + live game screen, tilted back ~8° */}
-      <group position={[0, 1.47, 0.185]} rotation={[-0.14, 0, 0]}>
-        <mesh position={[0, 0, -0.01]}>
-          <boxGeometry args={[0.68, 0.4, 0.02]} />
-          <meshStandardMaterial color="#050506" roughness={0.3} />
+        <mesh position={[0, -0.005, 0.278]}>
+          <boxGeometry args={[0.86, 0.09, 0.012]} /><meshStandardMaterial color={bodyDark} />
         </mesh>
-        {/* ScreenFace is authored at 1.95×1.0; scale to 0.64×0.33 so it
-            fills the bezel with only a thin black rim */}
-        <group position={[0, -0.016, -0.05]} scale={0.33}>
-          <ScreenFace mode={mode} flapRef={flapRef} onScore={onScore} onDeath={onDeath} />
-        </group>
+        {[-0.045, 0.045].map((y) => (
+          <mesh key={y} position={[0, y, 0.286]}>
+            <boxGeometry args={[0.86, 0.008, 0.012]} /><meshStandardMaterial color={accent} />
+          </mesh>
+        ))}
+        {[-0.205, 0.205].map((x) => (
+          <group key={x} position={[x, 0.06, 0.015]} scale={0.19}>
+            <JoyStick position={[-0.5, 0, 0]} stickColor="#b3b0aa" accent={accent} />
+            {[[0.2, -0.4], [0.8, -0.4], [0.5, 0], [0.2, 0.4], [0.8, 0.4]].map(([bx, bz], i) => (
+              <Button key={i} position={[bx, 0.02, bz]} color={i === 2 ? "#eee5cc" : "#d8ac45"} />
+            ))}
+          </group>
+        ))}
       </group>
-
-      {/* Marquee on top — lit "FLAPPY" header */}
-      <RoundedBox args={[0.78, 0.2, 0.5]} radius={0.015} smoothness={3}
-        position={[0, 1.88, -0.08]} castShadow>
-        <meshStandardMaterial color={bodyDark} roughness={0.6} />
+      {/* Recessed 4:3 display; live face sits in front of its tilted bezel. */}
+      <group position={[0, 1.46, 0.04]} rotation={[-0.28, 0, 0]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.76, 0.64, 0.035]} /><meshStandardMaterial color="#09090b" roughness={0.45} />
+        </mesh>
+        <mesh position={[0, 0, 0.019]}>
+          <planeGeometry args={[0.642, 0.487]} /><meshBasicMaterial color="#b68b35" />
+        </mesh>
+        <ScreenFace mode={mode} flapRef={flapRef} onScore={onScore} onDeath={onDeath} />
+      </group>
+      {/* Projecting marquee hood. */}
+      <RoundedBox args={[0.81, 0.22, 0.65]} radius={0.008} position={[0, 1.91, -0.02]} castShadow>
+        <meshStandardMaterial color={bodyDark} roughness={0.55} />
       </RoundedBox>
       <Marquee glow={glow} accent={accent} />
-      {/* Marquee backlight spill onto the wall behind */}
-      <pointLight position={[0, 1.95, 0.35]} color={accent} intensity={glow ? 0.5 : 0.25} distance={1.6} decay={2} />
-
-      {/* Side-art panels (both sides) */}
-      {[-0.385, 0.385].map((sx) => (
-        <mesh key={sx} position={[sx, 1.1, -0.04]} rotation={[0, sx < 0 ? -Math.PI / 2 : Math.PI / 2, 0]}>
-          <planeGeometry args={[0.6, 1.5]} />
-          <meshStandardMaterial color={sideArt} roughness={0.62} />
-        </mesh>
-      ))}
-
-      {/* Screen spill */}
-      <pointLight
-        ref={screenGlow}
-        position={[0, 1.4, 0.5]}
-        color={accent}
-        intensity={hovered ? 0.8 : 0.45}
-        distance={3}
-        decay={2}
-      />
+      <group position={[0, -1.024, 0.23]} scale={0.62}>
+        <Marquee glow={false} accent={accent} />
+      </group>
+      <pointLight position={[0, 1.86, 0.44]} color="#ffd18b" intensity={glow ? 0.4 : 0.2} distance={1.2} />
+      <pointLight ref={screenGlow} position={[0, 1.4, 0.5]} color="#6b9bff" intensity={hovered ? 0.45 : 0.2} distance={2} />
     </group>
   );
 }
@@ -1577,21 +1559,14 @@ function CameraRig({ mode, reduceMotion, controlsRef, onSettled }) {
       }
     }
 
-    const aspect = size.width / Math.max(1, size.height);
-    // Standing player: eye ~0.3 m below screen centre, looking slightly up
-    // at the screen while the ledge stays in the lower third of the frame.
-    let dz;
-    if (aspect >= 1.4) dz = 1.25;
-    else if (aspect >= 1.0) dz = 1.45;
-    else if (aspect >= 0.7) dz = 1.85;
-    else dz = 2.35;
-    // Standing player at the ledge: eye ~25 cm above screen centre looking
-    // slightly down, so the sticks sit below the screen instead of across it
-    // and the ledge/buttons anchor the bottom of the frame.
-    playTarget.current.set(PLAY_LOOK.x, PLAY_LOOK.y + 0.28, PLAY_LOOK.z + dz);
-    playLook.current.set(PLAY_LOOK.x, PLAY_LOOK.y - 0.02, PLAY_LOOK.z);
+    // Stand above screen centre and look slightly down at the display and deck.
+    const { distance: dz, offsetY } = getArcadeFraming(size.width, Math.max(1, size.height));
+    playTarget.current.set(PLAY_LOOK.x, PLAY_LOOK.y + 0.54, PLAY_LOOK.z + dz);
+    playLook.current.copy(PLAY_LOOK);
+    if (inGame) camera.setViewOffset(size.width, size.height, 0, offsetY, size.width, size.height);
+    else if (camera.view?.enabled) camera.clearViewOffset();
 
-    const t = reduceMotion ? 1 : 0.08;
+    const t = reduceMotion ? 1 : 1 - Math.exp(-5 * dt);
     const targetFov = inGame ? PLAY_FOV : IDLE_FOV;
 
     if (inGame || !settled.current) {
