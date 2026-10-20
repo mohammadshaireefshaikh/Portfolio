@@ -601,11 +601,234 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
   );
 }
 
+// ─── Phase 2 furniture ────────────────────────────────────────
+// All pieces use local y=0 = floor so the whole group just drops to ROOM.floorY.
+
+function PoolTable({ position, rotation = [0, 0, 0] }) {
+  const legY = 0.375;
+  const topY = 0.78;
+  const feltY = 0.84;
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Four legs */}
+      {[[-1.1, 0.5], [1.1, 0.5], [-1.1, -0.5], [1.1, -0.5]].map(([x, z], i) => (
+        <mesh key={i} position={[x, legY, z]} castShadow>
+          <boxGeometry args={[0.18, 0.75, 0.18]} />
+          <meshStandardMaterial color="#2b1a10" roughness={0.85} />
+        </mesh>
+      ))}
+      {/* Wooden rail */}
+      <mesh position={[0, topY, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.6, 0.18, 1.4]} />
+        <meshStandardMaterial color="#3b2410" roughness={0.7} />
+      </mesh>
+      {/* Green felt */}
+      <mesh position={[0, feltY, 0]} receiveShadow>
+        <boxGeometry args={[2.4, 0.04, 1.2]} />
+        <meshStandardMaterial color="#0b5a24" roughness={0.95} />
+      </mesh>
+      {/* Six pockets */}
+      {[[-1.15, 0.55], [1.15, 0.55], [-1.15, -0.55], [1.15, -0.55], [0, 0.6], [0, -0.6]].map(([x, z], i) => (
+        <mesh key={i} position={[x, feltY + 0.015, z]}>
+          <cylinderGeometry args={[0.1, 0.1, 0.03, 16]} />
+          <meshStandardMaterial color="#000" />
+        </mesh>
+      ))}
+      {/* Rack of 3 balls */}
+      {[
+        [-0.1, 0.1, "#ff3030"],
+        [0.1, 0.1, "#ffcf00"],
+        [0, -0.08, "#ffffff"],
+      ].map(([x, z, col], i) => (
+        <mesh key={i} position={[x, feltY + 0.06, z]} castShadow>
+          <sphereGeometry args={[0.055, 14, 14]} />
+          <meshStandardMaterial color={col} roughness={0.35} metalness={0.1} />
+        </mesh>
+      ))}
+      {/* Cue */}
+      <mesh position={[0.4, feltY + 0.03, 0.4]} rotation={[0, 0.5, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.016, 0.01, 1.6, 10]} />
+        <meshStandardMaterial color="#8b5a2b" roughness={0.6} />
+      </mesh>
+      {/* Hanging lamp above table */}
+      <mesh position={[0, 2.1, 0]}>
+        <coneGeometry args={[0.35, 0.3, 20, 1, true]} />
+        <meshStandardMaterial color="#0e0a06" roughness={0.5} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 2.0, 0]}>
+        <sphereGeometry args={[0.08, 12, 12]} />
+        <meshStandardMaterial color="#ffe8b0" emissive="#ffe8b0" emissiveIntensity={2} toneMapped={false} />
+      </mesh>
+      <pointLight position={[0, 1.9, 0]} color="#ffd890" intensity={1.3} distance={4} decay={2} />
+    </group>
+  );
+}
+
+function Sofa({ position, rotation = [0, 0, 0] }) {
+  const uphol = "#2a1f1a";
+  const cushion = "#3a2b22";
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Base */}
+      <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.4, 0.3, 0.95]} />
+        <meshStandardMaterial color={uphol} roughness={0.9} />
+      </mesh>
+      {/* Backrest */}
+      <mesh position={[0, 0.75, -0.37]} castShadow>
+        <boxGeometry args={[2.4, 0.55, 0.2]} />
+        <meshStandardMaterial color={uphol} roughness={0.9} />
+      </mesh>
+      {/* Arms */}
+      {[-1.15, 1.15].map((x, i) => (
+        <mesh key={i} position={[x, 0.55, 0]} castShadow>
+          <boxGeometry args={[0.2, 0.6, 0.95]} />
+          <meshStandardMaterial color="#241915" roughness={0.9} />
+        </mesh>
+      ))}
+      {/* Seat cushions */}
+      {[-0.73, 0, 0.73].map((x, i) => (
+        <mesh key={i} position={[x, 0.5, 0.08]} castShadow>
+          <boxGeometry args={[0.7, 0.16, 0.78]} />
+          <meshStandardMaterial color={cushion} roughness={0.95} />
+        </mesh>
+      ))}
+      {/* Back cushions */}
+      {[-0.73, 0, 0.73].map((x, i) => (
+        <mesh key={i} position={[x, 0.82, -0.22]} castShadow>
+          <boxGeometry args={[0.7, 0.42, 0.14]} />
+          <meshStandardMaterial color={cushion} roughness={0.95} />
+        </mesh>
+      ))}
+      {/* A throw pillow for warmth */}
+      <mesh position={[-0.73, 0.65, 0.1]} rotation={[0.3, 0.2, 0.1]} castShadow>
+        <boxGeometry args={[0.3, 0.3, 0.1]} />
+        <meshStandardMaterial color="#8b2e2e" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
+function HotWheelsShelf({ wallX, y = 1.3 }) {
+  const shelfLen = 3.4;
+  const colors = ["#ff3b30", "#ffcc00", "#30d158", "#0a84ff", "#ff9f0a", "#bf5af2", "#ff2d55"];
+  const rows = 3;
+  const perRow = 7;
+  return (
+    <group position={[wallX, y, 0]} rotation={[0, -Math.sign(wallX) * Math.PI / 2, 0]}>
+      {Array.from({ length: rows }).map((_, r) => {
+        const rowY = r * 0.42;
+        return (
+          <group key={r} position={[0, rowY, 0]}>
+            {/* Shelf plank */}
+            <mesh position={[0, 0, 0.08]} castShadow receiveShadow>
+              <boxGeometry args={[shelfLen, 0.04, 0.2]} />
+              <meshStandardMaterial color="#1a1a1e" roughness={0.9} />
+            </mesh>
+            {/* Shelf brackets */}
+            {[-shelfLen / 2 + 0.3, 0, shelfLen / 2 - 0.3].map((bx, bi) => (
+              <mesh key={bi} position={[bx, -0.06, 0.08]}>
+                <boxGeometry args={[0.04, 0.12, 0.16]} />
+                <meshStandardMaterial color="#333" />
+              </mesh>
+            ))}
+            {/* Cars */}
+            {Array.from({ length: perRow }).map((_, i) => {
+              const x = (i / (perRow - 1) - 0.5) * (shelfLen - 0.5);
+              const col = colors[(r * perRow + i) % colors.length];
+              return (
+                <group key={i} position={[x, 0.08, 0.06]}>
+                  <mesh castShadow>
+                    <boxGeometry args={[0.3, 0.09, 0.14]} />
+                    <meshStandardMaterial color={col} roughness={0.4} metalness={0.35} />
+                  </mesh>
+                  <mesh position={[0, 0.07, 0]} castShadow>
+                    <boxGeometry args={[0.18, 0.07, 0.14]} />
+                    <meshStandardMaterial color={col} roughness={0.4} metalness={0.35} />
+                  </mesh>
+                  {/* Wheels */}
+                  <mesh position={[-0.1, -0.03, 0.07]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.025, 0.025, 0.02, 10]} />
+                    <meshStandardMaterial color="#111" />
+                  </mesh>
+                  <mesh position={[0.1, -0.03, 0.07]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.025, 0.025, 0.02, 10]} />
+                    <meshStandardMaterial color="#111" />
+                  </mesh>
+                  <mesh position={[-0.1, -0.03, -0.07]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.025, 0.025, 0.02, 10]} />
+                    <meshStandardMaterial color="#111" />
+                  </mesh>
+                  <mesh position={[0.1, -0.03, -0.07]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.025, 0.025, 0.02, 10]} />
+                    <meshStandardMaterial color="#111" />
+                  </mesh>
+                </group>
+              );
+            })}
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function OnePiecePoster({ x = -2.2, y = 1.4 }) {
+  const bgRed = "#8a1818";
+  const bone = "#f0ead6";
+  const gold = "#f5c518";
+  return (
+    <group position={[x, y, -ROOM.size / 2 + 0.03]}>
+      {/* Frame */}
+      <mesh castShadow>
+        <boxGeometry args={[1.9, 2.6, 0.06]} />
+        <meshStandardMaterial color="#1a1510" roughness={0.6} />
+      </mesh>
+      {/* Poster face */}
+      <mesh position={[0, 0, 0.04]}>
+        <planeGeometry args={[1.75, 2.45]} />
+        <meshStandardMaterial color={bgRed} roughness={0.95} />
+      </mesh>
+      {/* Skull */}
+      <mesh position={[0, 0.35, 0.05]}>
+        <circleGeometry args={[0.4, 32]} />
+        <meshStandardMaterial color={bone} roughness={0.85} />
+      </mesh>
+      {/* Hat brim */}
+      <mesh position={[0, 0.82, 0.05]}>
+        <boxGeometry args={[1.0, 0.1, 0.004]} />
+        <meshStandardMaterial color={gold} />
+      </mesh>
+      {/* Hat crown */}
+      <mesh position={[0, 0.92, 0.05]}>
+        <boxGeometry args={[0.45, 0.1, 0.004]} />
+        <meshStandardMaterial color={gold} />
+      </mesh>
+      {/* Crossbones */}
+      <mesh position={[0, 0, 0.05]} rotation={[0, 0, Math.PI / 4]}>
+        <boxGeometry args={[1.05, 0.11, 0.003]} />
+        <meshStandardMaterial color={bone} />
+      </mesh>
+      <mesh position={[0, 0, 0.05]} rotation={[0, 0, -Math.PI / 4]}>
+        <boxGeometry args={[1.05, 0.11, 0.003]} />
+        <meshStandardMaterial color={bone} />
+      </mesh>
+      {/* Title bar */}
+      <mesh position={[0, -0.95, 0.05]}>
+        <boxGeometry args={[1.5, 0.32, 0.003]} />
+        <meshStandardMaterial color={gold} />
+      </mesh>
+      {/* Spotlight — picks the poster out of the room */}
+      <pointLight position={[0, 1.5, 0.8]} color="#ffcf90" intensity={0.6} distance={4} decay={2} />
+    </group>
+  );
+}
+
 /**
  * RoomShell — floor, three walls, baseboard trim, warm corner lamps,
  * cool back-wall accent. Phase 1 of the arcade-room build. Furniture
- * (sofa, pool table, Hot Wheels shelf, One Piece wall, speakers, etc.)
- * lands in later phases.
+ * from Phase 2 (sofa, pool table, Hot Wheels shelf, One Piece poster)
+ * mounts inside this group.
  */
 function RoomShell() {
   const { size, height, floorY } = ROOM;
@@ -696,6 +919,19 @@ function RoomShell() {
         <sphereGeometry args={[0.08, 12, 12]} />
         <meshStandardMaterial color="#ffcf90" emissive="#ffcf90" emissiveIntensity={1.5} toneMapped={false} />
       </mesh>
+
+      {/* ─── Phase 2 furniture ─── */}
+      {/* Pool table — far-left of room, long side facing camera */}
+      <PoolTable position={[-3.2, floorY, 1.4]} rotation={[0, 0.25, 0]} />
+
+      {/* Sofa — right of cabinet, angled toward it */}
+      <Sofa position={[3.0, floorY, 1.3]} rotation={[0, -Math.PI / 3, 0]} />
+
+      {/* Hot Wheels shelf — right wall above the sofa */}
+      <HotWheelsShelf wallX={half - 0.02} y={1.4} />
+
+      {/* One Piece poster — back wall, right of the arcade */}
+      <OnePiecePoster x={2.2} y={1.4} />
     </group>
   );
 }
