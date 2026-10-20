@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDown } from "lucide-react";
 import { GitHubIcon, LinkedInIcon } from "./Icons";
@@ -30,6 +30,15 @@ const itemVariants = {
 
 export default function Hero() {
   const [entered, setEntered] = useState(false);
+  const [gameActive, setGameActive] = useState(false);
+
+  // Hide the hero text block while the arcade game is in play/dead mode.
+  // ConsoleScene broadcasts 'game-mode' when its internal mode state changes.
+  useEffect(() => {
+    const onMode = (e) => setGameActive(e.detail === "playing" || e.detail === "dead");
+    window.addEventListener("game-mode", onMode);
+    return () => window.removeEventListener("game-mode", onMode);
+  }, []);
 
   const scrollTo = (id) =>
     document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
@@ -46,13 +55,22 @@ export default function Hero() {
       {/* Loading screen (sits above everything until the user clicks ENTER) */}
       {!entered && <LoadingOverlay onEnter={() => setEntered(true)} />}
 
-      {/* Text block — floats over the bottom of the hero */}
-      <div className="relative z-10 min-h-screen max-w-6xl mx-auto px-6 pt-20 pb-10 pointer-events-none flex flex-col justify-end">
+      {/* Text block — floats over the bottom of the hero.
+          Fully hidden while the game is active so it can't overlap the
+          cabinet or absorb clicks on the top-left score HUD. */}
+      <div
+        className="relative z-10 min-h-screen max-w-6xl mx-auto px-6 pt-20 pb-10 pointer-events-none flex flex-col justify-end"
+        style={{
+          opacity: gameActive ? 0 : 1,
+          visibility: gameActive ? "hidden" : "visible",
+          transition: "opacity 300ms ease-out, visibility 300ms",
+        }}
+      >
         <motion.div
           className="pointer-events-auto w-full md:max-w-xl md:text-left text-center"
           variants={containerVariants}
           initial="hidden"
-          animate={entered ? "visible" : "hidden"}
+          animate={entered && !gameActive ? "visible" : "hidden"}
           style={{
             textShadow: "0 2px 24px rgba(0,0,0,0.75)",
           }}
