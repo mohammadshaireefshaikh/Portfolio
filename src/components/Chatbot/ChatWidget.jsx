@@ -13,7 +13,7 @@ const STARTER_PROMPTS = [
 const WELCOME_MESSAGE = {
   role: "assistant",
   content:
-    "Hi, I'm Mohammad's portfolio assistant. Ask me anything about his work — projects, stack, experience, or how to reach him.",
+    "Hi, I'm Mohammad's portfolio assistant. Ask me anything about his work — projects, stack, experience, or how to reach him. Messages are processed by an AI provider and not stored — please don't share personal details.",
 };
 
 // Local dev: leave VITE_API_URL blank → Vite proxy → http://localhost:3001

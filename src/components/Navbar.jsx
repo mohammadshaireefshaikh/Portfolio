@@ -1,7 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Mail } from "lucide-react";
+import { GitHubIcon, LinkedInIcon } from "./Icons";
 import { personal } from "../data/portfolio";
+
+// Contact details live in the navbar now (hero text is a minimal bottom strip)
+const SOCIALS = [
+  { href: personal.github, label: "GitHub", Icon: GitHubIcon, external: true },
+  { href: personal.linkedin, label: "LinkedIn", Icon: LinkedInIcon, external: true },
+  { href: `mailto:${personal.email}`, label: "Email", Icon: Mail, external: false },
+];
 
 const links = [
   { label: "About", href: "#about" },
@@ -20,7 +28,7 @@ export default function Navbar() {
 
   // Hide navbar while the console game is in play mode
   useEffect(() => {
-    const onMode = (e) => setGameActive(e.detail === "playing");
+    const onMode = (e) => setGameActive(e.detail === "playing" || e.detail === "dead");
     window.addEventListener("game-mode", onMode);
     return () => window.removeEventListener("game-mode", onMode);
   }, []);
@@ -167,13 +175,26 @@ export default function Navbar() {
             ))}
           </div>
 
-          <a
-            href={personal.cvUrl}
-            download
-            className="liquid-glass-btn relative z-[1] text-xs font-medium text-white border border-white/10 rounded-full px-6 py-2.5 uppercase tracking-widest flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
-          >
-            CV
-          </a>
+          <div className="relative z-[1] flex items-center gap-1">
+            {SOCIALS.map(({ href, label, Icon, external }) => (
+              <a
+                key={label}
+                href={href}
+                aria-label={label}
+                {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                className="w-9 h-9 flex items-center justify-center rounded-full text-[#9aa3b5] hover:text-white hover:bg-white/[0.07] transition-colors duration-200"
+              >
+                <Icon size={16} />
+              </a>
+            ))}
+            <a
+              href={personal.cvUrl}
+              download
+              className="liquid-glass-btn ml-1 text-xs font-medium text-white border border-white/10 rounded-full px-5 py-2.5 uppercase tracking-widest flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+            >
+              CV
+            </a>
+          </div>
         </div>
 
         {/* ── Mobile pill ─────────────────────────────────── */}
@@ -228,6 +249,23 @@ export default function Navbar() {
               >
                 Download CV
               </a>
+              {/* Contact row */}
+              <div className="relative z-[1] mt-2 pt-3 border-t border-white/[0.07] flex items-center justify-between px-1">
+                <span className="text-[11px] text-[#86868b] truncate">{personal.email}</span>
+                <div className="flex items-center gap-1">
+                  {SOCIALS.map(({ href, label, Icon, external }) => (
+                    <a
+                      key={label}
+                      href={href}
+                      aria-label={label}
+                      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                      className="w-9 h-9 flex items-center justify-center rounded-full text-[#9aa3b5] hover:text-white hover:bg-white/[0.07] transition-colors"
+                    >
+                      <Icon size={16} />
+                    </a>
+                  ))}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}

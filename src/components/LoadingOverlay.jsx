@@ -9,20 +9,27 @@ import { motion, AnimatePresence } from "framer-motion";
  * "press start" beat before the scene reveals.
  */
 export default function LoadingOverlay({ onEnter }) {
-  const { progress, active } = useProgress();
+  const { progress, active, total } = useProgress();
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(true);
 
-  // Wait for Three.js loaders to finish + fonts to be ready
+  // Ready when Three.js loaders finish (or when nothing was ever queued —
+  // a procedural scene with no HDRI/textures reports total=0 forever) and
+  // fonts are in. Hard 7s fallback so the gate can never deadlock.
   useEffect(() => {
-    if (progress >= 100 && !active) {
-      const t = setTimeout(async () => {
-        try { await document.fonts.ready; } catch {}
-        setReady(true);
-      }, 250);
-      return () => clearTimeout(t);
-    }
-  }, [progress, active]);
+    const settled = !active && (progress >= 100 || total === 0);
+    if (!settled) return;
+    const t = setTimeout(async () => {
+      try { await document.fonts.ready; } catch {}
+      setReady(true);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [progress, active, total]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 7000);
+    return () => clearTimeout(t);
+  }, []);
 
   function enter() {
     setVisible(false);

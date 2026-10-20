@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Sparkles, ArrowRight } from "lucide-react";
 
-export default function HeroChatCTA() {
+export default function HeroChatCTA({ compact = false }) {
   const reduceMotion = useReducedMotion();
 
   const openChat = () => {
@@ -16,7 +16,11 @@ export default function HeroChatCTA() {
       transition={{ duration: 0.6, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.98 }}
-      className="group relative inline-flex items-center gap-3 pl-3 pr-4 py-3 rounded-2xl overflow-hidden"
+      className={`group relative inline-flex items-center overflow-hidden ${
+        compact
+          ? "gap-2 pl-2 pr-3 py-1.5 rounded-full"
+          : "gap-3 pl-3 pr-4 py-3 rounded-2xl"
+      }`}
       style={{
         background: "linear-gradient(180deg, rgba(0,113,227,0.12) 0%, rgba(0,113,227,0.04) 100%)",
         border: "1px solid rgba(0,113,227,0.35)",
@@ -41,10 +45,10 @@ export default function HeroChatCTA() {
       </span>
 
       <span className="flex flex-col items-start text-left leading-tight">
-        <span className="text-[11px] uppercase tracking-[0.15em] font-medium text-[#2997ff]">
+        <span className={`text-[11px] uppercase tracking-[0.15em] font-medium text-[#2997ff] ${compact ? "hidden" : ""}`}>
           New · AI Assistant
         </span>
-        <span className="text-sm font-medium text-white mt-0.5">
+        <span className={`font-medium text-white ${compact ? "text-xs" : "text-sm mt-0.5"}`}>
           Ask anything about my work
         </span>
       </span>

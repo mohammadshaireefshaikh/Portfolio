@@ -1,27 +1,53 @@
 import { Suspense, useRef, useMemo, useEffect, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Float, Environment, ContactShadows, useTexture } from "@react-three/drei";
+import { Float, ContactShadows, RoundedBox } from "@react-three/drei";
 import { X, Volume2, VolumeX, Play, Trophy, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 
 // Camera targets (play distance computed in CameraRig)
-// IDLE frames the whole room; PLAY lerps toward the (shrunken) arcade screen.
-const IDLE_POS = new THREE.Vector3(3.8, 2.2, 5.2);
-const IDLE_LOOK = new THREE.Vector3(0, 0.3, 0);
-const PLAY_LOOK = new THREE.Vector3(0, -0.05, -0.09);
+// IDLE is a far, long-lens 3/4 "isometric" view — ported from the FixMyHair
+// clinic hero (ortho camera, ~31° elevation, ~40° azimuth). A 20° FOV from
+// ~24m away reads as near-orthographic while still letting PLAY mode dolly in.
+const IDLE_POS = new THREE.Vector3(19.5, 16.5, 21);
+// Look target sits below the floor so the room rides high in the frame and
+// the hero's bottom text strip only covers the plinth / front edge.
+const IDLE_LOOK = new THREE.Vector3(0.2, -0.55, -0.4);
+// Upright café cabinet: screen face sits ~1.4 m up on its front. The cabinet
+// stands against the back wall at CAB_POS; PLAY_LOOK is that screen in world.
+const CAB_POS = [1.3, -0.56, -2.65];
+const PLAY_LOOK = new THREE.Vector3(CAB_POS[0], CAB_POS[1] + 1.42, CAB_POS[2] + 0.2);
+const IDLE_FOV = 20;
+const PLAY_FOV = 35;
 
-// Room geometry constants
+// Room geometry — big games-room diorama on a floating plinth. Back wall +
+// left wall are solid rounded slabs; the RIGHT wall is a single-sided plane
+// facing inward, so the iso camera (front-right) sees straight through it
+// while the anime shelf mounted on it stays visible (dollhouse cut-away).
+// No ceiling, open front.
 const ROOM = {
-  size: 10,         // floor is 10×10 (square room)
-  height: 4.5,      // ceiling height
-  floorY: -0.56,    // flush with the shrunken cabinet's new base position
+  size: 10.0,       // width  (x)
+  depth: 7.0,       // depth  (z)
+  height: 2.9,      // wall height
+  wallT: 0.17,      // wall slab thickness — wall-mounted props must sit at -depth/2 + wallT
+  floorY: -0.56,
+};
+
+// Diorama palette — the clinic's soft, matte, uniformly-rough surfaces
+// (roughness ≈ 0.62, metal 0) translated to the portfolio's charcoal brand.
+const PAL = {
+  plinth: "#24262c",
+  floor:  "#34373f",
+  wall:   "#3b3e47",
+  dado:   "#2f4a63",   // sage-dado → muted brand blue
+  cap:    "#4f5663",   // subtle on charcoal (the clinic's white cap on ivory)
+  trim:   "#1b1c21",
 };
 
 // Realistic-scale pass: the cocktail arcade cabinet is tuned at ~0.45× of
 // its original "demo" size so it reads as a bartop/cocktail unit (≈1.4m
 // wide × ~0.9m tall) next to the sofa and pool table.
-const CABINET_SCALE = 0.6;
+const CABINET_SCALE = 1.0; // upright cabinet is modelled at true size
 
 // ─── Audio ────────────────────────────────────────────────────
 let audioCtx = null;
@@ -405,6 +431,61 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
   return texture;
 }
 
+// Lit "FLAPPY" header strip on top of the cabinet — text baked into a tiny
+// canvas texture (no font loader, no extra bundle).
+function Marquee({ glow, accent }) {
+  const tex = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 512;
+    c.height = 104;
+    const g = c.getContext("2d");
+    const grad = g.createLinearGradient(0, 0, 0, c.height);
+    grad.addColorStop(0, "#1e8bff");
+    grad.addColorStop(1, accent);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, c.width, c.height);
+    // Subtle scanline band
+    g.fillStyle = "rgba(255,255,255,0.08)";
+    g.fillRect(0, 0, c.width, 14);
+    g.fillStyle = "#ffffff";
+    g.font = "900 64px 'Space Grotesk', system-ui, sans-serif";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.letterSpacing = "10px";
+    g.fillText("FLAPPY", c.width / 2 + 5, c.height / 2 + 2);
+    // Pixel bat glyph each side
+    g.fillStyle = "#0b1a33";
+    const drawMiniBat = (cx, cy, cell) => {
+      const rows = BAT_FRAMES[0];
+      const ox = cx - (rows[0].length * cell) / 2;
+      const oy = cy - (rows.length * cell) / 2;
+      rows.forEach((row, yy) => [...row].forEach((ch, xx) => {
+        if (ch === "X") g.fillRect(ox + xx * cell, oy + yy * cell, cell, cell);
+      }));
+    };
+    drawMiniBat(70, c.height / 2, 4);
+    drawMiniBat(c.width - 70, c.height / 2, 4);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  }, [accent]);
+  useEffect(() => () => tex.dispose(), [tex]);
+  return (
+    <mesh position={[0, 1.88, 0.172]}>
+      <planeGeometry args={[0.7, 0.142]} />
+      <meshStandardMaterial
+        map={tex}
+        emissive="#ffffff"
+        emissiveMap={tex}
+        emissiveIntensity={glow ? 1.1 : 0.75}
+        roughness={0.35}
+        toneMapped={false}
+      />
+    </mesh>
+  );
+}
+
 function ScreenFace({ mode, flapRef, onScore, onDeath }) {
   const tex = useFlappyTexture(mode, flapRef, onScore, onDeath);
   return (
@@ -525,9 +606,10 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
   useFrame((state) => {
     if (!group.current) return;
     if (mode === "idle" && !reduceMotion) {
+      // A 1.9 m cabinet shouldn't rock — just a whisper of life
       const t = state.clock.elapsedTime;
-      group.current.rotation.y = Math.sin(t * 0.4) * 0.25;
-      group.current.rotation.x = Math.sin(t * 0.3) * 0.05 - 0.1;
+      group.current.rotation.y = Math.sin(t * 0.4) * 0.02;
+      group.current.rotation.x = 0;
     } else if (mode === "playing" || mode === "dead") {
       group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, 0, 0.1);
       group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, 0, 0.1);
@@ -552,17 +634,19 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
     };
   }, [hovered, mode]);
 
-  const bodyColor = "#1a1a1c";
-  const bodyDark = "#0f0f10";
+  const bodyColor = "#23242a";   // matte charcoal cabinet, clinic-style roughness
+  const bodyDark = "#141518";
+  const sideArt = "#0f3f7a";     // deep brand-blue side panels
   const stickColor = "#2a2a2c";
   const accent = "#0071e3";
+  const glow = hovered && mode === "idle";
 
+  // Upright "café" arcade cabinet, true scale. Local origin = floor, centre.
+  // Faces +z. Overall ≈ 0.76 w × 1.92 h × 0.8 d.
   return (
     <group
       ref={group}
-      // Position tuned so the shrunken cabinet base sits flush on the floor.
-      // CABINET_SCALE is applied every frame in useFrame above.
-      position={[0, -0.41, 0]}
+      position={CAB_POS}
       scale={CABINET_SCALE}
       onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
       onPointerOut={(e) => { e.stopPropagation(); setHovered(false); }}
@@ -571,48 +655,96 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
         if (mode === "idle") { ctx(); setMode("playing"); }
       }}
     >
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[3.2, 0.5, 2]} />
-        <meshStandardMaterial
-          color={bodyColor}
-          roughness={0.6}
-          metalness={0.2}
-          emissive={hovered && mode === "idle" ? accent : "#000"}
-          emissiveIntensity={hovered && mode === "idle" ? 0.12 : 0}
-        />
-      </mesh>
-      <mesh position={[0, -0.3, 0]}>
-        <boxGeometry args={[3.4, 0.1, 2.2]} />
-        <meshStandardMaterial color={bodyDark} roughness={0.8} />
+      {/* Kick plate */}
+      <mesh position={[0, 0.06, 0.02]} castShadow receiveShadow>
+        <boxGeometry args={[0.72, 0.12, 0.76]} />
+        <meshStandardMaterial color={bodyDark} roughness={0.7} />
       </mesh>
 
-      <group position={[0, 0.55, -0.35]} rotation={[-0.35, 0, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[2.4, 1.4, 0.3]} />
-          <meshStandardMaterial color={bodyColor} roughness={0.6} metalness={0.2} />
-        </mesh>
-        <mesh position={[0, 0.05, 0.16]}>
-          <boxGeometry args={[2.1, 1.15, 0.05]} />
-          <meshStandardMaterial color="#050506" roughness={0.3} />
-        </mesh>
-        <ScreenFace mode={mode} flapRef={flapRef} onScore={onScore} onDeath={onDeath} />
+      {/* Lower body (coin-door section) */}
+      <RoundedBox args={[0.76, 0.9, 0.8]} radius={0.02} smoothness={3}
+        position={[0, 0.57, 0]} castShadow receiveShadow>
+        <meshStandardMaterial
+          color={bodyColor} roughness={0.62} metalness={0.05}
+          emissive={glow ? accent : "#000"} emissiveIntensity={glow ? 0.1 : 0}
+        />
+      </RoundedBox>
+      {/* Coin door */}
+      <mesh position={[0, 0.5, 0.405]}>
+        <boxGeometry args={[0.3, 0.22, 0.01]} />
+        <meshStandardMaterial color="#5e636e" roughness={0.4} metalness={0.4} />
+      </mesh>
+      <mesh position={[-0.06, 0.52, 0.412]}>
+        <boxGeometry args={[0.03, 0.08, 0.004]} />
+        <meshStandardMaterial color="#0b0b0d" />
+      </mesh>
+      <mesh position={[0.06, 0.52, 0.412]}>
+        <boxGeometry args={[0.03, 0.08, 0.004]} />
+        <meshStandardMaterial color="#0b0b0d" />
+      </mesh>
+
+      {/* Control-panel ledge (slopes toward player) */}
+      <group position={[0, 1.02, 0.17]} rotation={[-0.18, 0, 0]}>
+        <RoundedBox args={[0.8, 0.09, 0.42]} radius={0.015} smoothness={3} castShadow receiveShadow>
+          <meshStandardMaterial color={bodyDark} roughness={0.55} />
+        </RoundedBox>
+        {/* Controls — reuse existing stick/button components at half size */}
+        <group position={[0, 0.045, 0.02]} scale={0.5}>
+          <JoyStick position={[-0.42, 0, 0.05]} stickColor={stickColor} accent={accent} />
+          <JoyStick position={[0.42, 0, 0.05]} stickColor={stickColor} accent={accent} />
+          <Button position={[-0.12, 0.03, 0.14]} color="#ff4d4d" />
+          <Button position={[0.08, 0.03, 0.14]} color="#f5c518" />
+          <Button position={[0.28, 0.03, 0.14]} color="#30c764" />
+          <Button position={[0.08, 0.03, -0.06]} color={accent} />
+        </group>
       </group>
 
+      {/* Upper housing (screen box), set back slightly */}
+      <RoundedBox args={[0.76, 0.72, 0.56]} radius={0.02} smoothness={3}
+        position={[0, 1.42, -0.1]} castShadow receiveShadow>
+        <meshStandardMaterial
+          color={bodyColor} roughness={0.62} metalness={0.05}
+          emissive={glow ? accent : "#000"} emissiveIntensity={glow ? 0.1 : 0}
+        />
+      </RoundedBox>
+      {/* Screen bezel + live game screen, tilted back ~8° */}
+      <group position={[0, 1.42, 0.185]} rotation={[-0.14, 0, 0]}>
+        <mesh position={[0, 0, -0.01]}>
+          <boxGeometry args={[0.66, 0.5, 0.02]} />
+          <meshStandardMaterial color="#050506" roughness={0.3} />
+        </mesh>
+        {/* ScreenFace is authored at 1.95×1.0; scale to 0.57×0.29 */}
+        <group position={[0, -0.015, -0.045]} scale={0.29}>
+          <ScreenFace mode={mode} flapRef={flapRef} onScore={onScore} onDeath={onDeath} />
+        </group>
+      </group>
+
+      {/* Marquee on top — lit "FLAPPY" header */}
+      <RoundedBox args={[0.78, 0.2, 0.5]} radius={0.015} smoothness={3}
+        position={[0, 1.88, -0.08]} castShadow>
+        <meshStandardMaterial color={bodyDark} roughness={0.6} />
+      </RoundedBox>
+      <Marquee glow={glow} accent={accent} />
+      {/* Marquee backlight spill onto the wall behind */}
+      <pointLight position={[0, 1.95, 0.35]} color={accent} intensity={glow ? 0.5 : 0.25} distance={1.6} decay={2} />
+
+      {/* Side-art panels (both sides) */}
+      {[-0.385, 0.385].map((sx) => (
+        <mesh key={sx} position={[sx, 1.1, -0.04]} rotation={[0, sx < 0 ? -Math.PI / 2 : Math.PI / 2, 0]}>
+          <planeGeometry args={[0.6, 1.5]} />
+          <meshStandardMaterial color={sideArt} roughness={0.62} />
+        </mesh>
+      ))}
+
+      {/* Screen spill */}
       <pointLight
         ref={screenGlow}
-        position={[0, 0.7, 0.2]}
+        position={[0, 1.4, 0.5]}
         color={accent}
-        intensity={hovered ? 0.9 : 0.55}
-        distance={5}
+        intensity={hovered ? 0.8 : 0.45}
+        distance={3}
+        decay={2}
       />
-
-      <JoyStick position={[-0.9, 0.3, 0.5]} stickColor={stickColor} accent={accent} />
-      <JoyStick position={[0.9, 0.3, 0.5]} stickColor={stickColor} accent={accent} />
-
-      <Button position={[-0.25, 0.26, 0.75]} color="#ff4d4d" />
-      <Button position={[0, 0.26, 0.75]} color="#f5c518" />
-      <Button position={[0.25, 0.26, 0.75]} color="#30c764" />
-      <Button position={[0, 0.26, 0.5]} color={accent} />
     </group>
   );
 }
@@ -790,11 +922,10 @@ function PopcornMachine({ position, rotation = [0, 0, 0] }) {
   );
 }
 
-function AnimeShelf({ wallX, y = 1.3 }) {
-  const shelfLen = 2.2;
-  const colors = ["#f5c518", "#30d158", "#ff2d55", "#0a84ff", "#bf5af2"];
+function AnimeShelf({ wallX, y = 1.3, z = 0, shelfLen = 4.2 }) {
+  const colors = ["#f5c518", "#30d158", "#ff2d55", "#0a84ff", "#bf5af2", "#ff9f0a", "#ffffff", "#5ac8fa"];
   return (
-    <group position={[wallX, y, -2.5]} rotation={[0, -Math.sign(wallX) * Math.PI / 2, 0]}>
+    <group position={[wallX, y, z]} rotation={[0, -Math.sign(wallX) * Math.PI / 2, 0]}>
       {/* Plank */}
       <mesh position={[0, 0, 0.08]} castShadow receiveShadow>
         <boxGeometry args={[shelfLen, 0.04, 0.22]} />
@@ -835,7 +966,7 @@ function AnimeShelf({ wallX, y = 1.3 }) {
 function Window({ x = -2.5, y = 1.7 }) {
   // Faux back-wall window glowing like a nighttime city view
   return (
-    <group position={[x, y, -ROOM.size / 2 + 0.02]}>
+    <group position={[x, y, -ROOM.depth / 2 + ROOM.wallT + 0.04]}>
       {/* Frame */}
       <mesh castShadow>
         <boxGeometry args={[1.6, 1.2, 0.08]} />
@@ -991,11 +1122,8 @@ function Sofa({ position, rotation = [0, 0, 0] }) {
   );
 }
 
-function HotWheelsShelf({ wallX, y = 1.3 }) {
-  const shelfLen = 3.4;
+function HotWheelsShelf({ wallX, y = 1.3, shelfLen = 5.4, rows = 3, perRow = 11 }) {
   const colors = ["#ff3b30", "#ffcc00", "#30d158", "#0a84ff", "#ff9f0a", "#bf5af2", "#ff2d55"];
-  const rows = 3;
-  const perRow = 7;
   return (
     <group position={[wallX, y, 0]} rotation={[0, -Math.sign(wallX) * Math.PI / 2, 0]}>
       {Array.from({ length: rows }).map((_, r) => {
@@ -1110,7 +1238,7 @@ function MultiPanelWallArt({ x = 0, y = 1.6, texturePath = "/img/zoro-wallart.jp
   }, [rotated]);
 
   return (
-    <group position={[x, y, -ROOM.size / 2 + 0.03]}>
+    <group position={[x, y, -ROOM.depth / 2 + ROOM.wallT + 0.04]}>
       {stepHeights.map((h, i) => {
         const panelX = (i - (panelCount - 1) / 2) * (panelWidth + gap);
         return (
@@ -1143,129 +1271,271 @@ function MultiPanelWallArt({ x = 0, y = 1.6, texturePath = "/img/zoro-wallart.jp
   );
 }
 
+// ─── Media wall: flat LED TV + black-glass table + PS5 + cable ─────
+function TVWall({ x, wallZ, floorY }) {
+  const tvW = 1.7, tvH = 0.96, tvY = floorY + 1.55;
+  const tableY = floorY + 0.5;
+  return (
+    <group>
+      {/* TV — thin bezel + dark glossy screen */}
+      <group position={[x, tvY, wallZ + 0.06]}>
+        <RoundedBox args={[tvW, tvH, 0.05]} radius={0.012} smoothness={3} castShadow>
+          <meshStandardMaterial color="#0d0e11" roughness={0.35} metalness={0.3} />
+        </RoundedBox>
+        <mesh position={[0, 0, 0.027]}>
+          <planeGeometry args={[tvW - 0.05, tvH - 0.05]} />
+          <meshStandardMaterial color="#0a1628" roughness={0.12} metalness={0.2} emissive="#0e2a55" emissiveIntensity={0.35} />
+        </mesh>
+        {/* Standby LED */}
+        <mesh position={[0, -tvH / 2 + 0.02, 0.03]}>
+          <boxGeometry args={[0.03, 0.006, 0.004]} />
+          <meshStandardMaterial color="#ff2e2e" emissive="#ff2e2e" emissiveIntensity={2} toneMapped={false} />
+        </mesh>
+      </group>
+
+      {/* Black glass table — top slab + two black legs */}
+      <group position={[x, tableY, wallZ + 0.32]}>
+        <RoundedBox args={[1.5, 0.035, 0.46]} radius={0.01} smoothness={3} castShadow receiveShadow>
+          <meshPhysicalMaterial color="#0b0b0d" roughness={0.08} metalness={0.1} transmission={0.25} thickness={0.2} transparent opacity={0.92} />
+        </RoundedBox>
+        {[-0.62, 0.62].map((lx) => (
+          <mesh key={lx} position={[lx, -(tableY - floorY) / 2 + 0.0175, 0]} castShadow>
+            <boxGeometry args={[0.05, tableY - floorY - 0.035, 0.4]} />
+            <meshStandardMaterial color="#111216" roughness={0.5} metalness={0.2} />
+          </mesh>
+        ))}
+        {/* Lower glass shelf */}
+        <mesh position={[0, -(tableY - floorY) * 0.5, 0]} receiveShadow>
+          <boxGeometry args={[1.4, 0.025, 0.4]} />
+          <meshPhysicalMaterial color="#0b0b0d" roughness={0.08} metalness={0.1} transmission={0.25} thickness={0.2} transparent opacity={0.9} />
+        </mesh>
+      </group>
+
+      {/* PS5 — white tall body with black core + blue light strip, on the table */}
+      <group position={[x + 0.42, tableY + 0.0175, wallZ + 0.3]}>
+        <mesh position={[0, 0.2, 0]} castShadow>
+          <boxGeometry args={[0.09, 0.4, 0.26]} />
+          <meshStandardMaterial color="#0a0a0c" roughness={0.45} />
+        </mesh>
+        {/* Two white "fins" */}
+        <RoundedBox args={[0.028, 0.42, 0.28]} radius={0.01} smoothness={3} position={[-0.055, 0.21, 0]} castShadow>
+          <meshStandardMaterial color="#f2f3f5" roughness={0.45} />
+        </RoundedBox>
+        <RoundedBox args={[0.028, 0.42, 0.28]} radius={0.01} smoothness={3} position={[0.055, 0.21, 0]} castShadow>
+          <meshStandardMaterial color="#f2f3f5" roughness={0.45} />
+        </RoundedBox>
+        <mesh position={[0, 0.3, 0.131]}>
+          <boxGeometry args={[0.08, 0.004, 0.003]} />
+          <meshStandardMaterial color="#4da3ff" emissive="#4da3ff" emissiveIntensity={2} toneMapped={false} />
+        </mesh>
+        {/* Base stand */}
+        <mesh position={[0, 0.006, 0]}>
+          <cylinderGeometry args={[0.07, 0.07, 0.012, 20]} />
+          <meshStandardMaterial color="#0a0a0c" roughness={0.5} />
+        </mesh>
+      </group>
+
+      {/* HDMI cable: PS5 → up the wall → TV */}
+      <mesh position={[x + 0.42, tableY + 0.12, wallZ + 0.16]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.006, 0.006, 0.28, 8]} />
+        <meshStandardMaterial color="#111" roughness={0.7} />
+      </mesh>
+      <mesh position={[x + 0.42, (tableY + 0.12 + tvY - tvH / 2) / 2, wallZ + 0.03]}>
+        <cylinderGeometry args={[0.006, 0.006, (tvY - tvH / 2) - (tableY + 0.12), 8]} />
+        <meshStandardMaterial color="#111" roughness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+// ─── Automatic cat feeder: white body + hopper + bowl with kibble ──
+function CatFeeder({ position, rotation = [0, 0, 0] }) {
+  return (
+    <group position={position} rotation={rotation}>
+      <RoundedBox args={[0.3, 0.42, 0.3]} radius={0.03} smoothness={3} position={[0, 0.21, 0]} castShadow receiveShadow>
+        <meshStandardMaterial color="#f1f2f4" roughness={0.62} />
+      </RoundedBox>
+      {/* Hopper lid */}
+      <RoundedBox args={[0.26, 0.1, 0.26]} radius={0.02} smoothness={3} position={[0, 0.47, 0]} castShadow>
+        <meshStandardMaterial color="#d7dae0" roughness={0.62} />
+      </RoundedBox>
+      {/* Chute */}
+      <mesh position={[0, 0.1, 0.16]} rotation={[0.6, 0, 0]}>
+        <boxGeometry args={[0.12, 0.08, 0.1]} />
+        <meshStandardMaterial color="#d7dae0" roughness={0.62} />
+      </mesh>
+      {/* Bowl */}
+      <mesh position={[0, 0.03, 0.3]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.13, 0.1, 0.06, 24]} />
+        <meshStandardMaterial color="#9fb3c8" roughness={0.5} metalness={0.3} />
+      </mesh>
+      {/* Kibble */}
+      {[[-0.03, 0.02], [0.03, -0.01], [0, 0.04], [0.05, 0.03], [-0.05, -0.03]].map(([kx, kz], i) => (
+        <mesh key={i} position={[kx, 0.065, 0.3 + kz]}>
+          <sphereGeometry args={[0.014, 8, 8]} />
+          <meshStandardMaterial color="#8a5a2b" roughness={0.9} />
+        </mesh>
+      ))}
+      {/* Status LED */}
+      <mesh position={[0.09, 0.36, 0.152]}>
+        <sphereGeometry args={[0.008, 8, 8]} />
+        <meshStandardMaterial color="#30d158" emissive="#30d158" emissiveIntensity={2} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+// ─── Sleeping cat (curled), sized to sit inside CatHouse ──────────
+function SleepingCat({ position, rotation = [0, 0, 0], color = "#2a2a2c" }) {
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Curled body */}
+      <mesh position={[0, 0.09, 0]} scale={[1.25, 0.65, 1]} castShadow>
+        <sphereGeometry args={[0.15, 20, 16]} />
+        <meshStandardMaterial color={color} roughness={0.95} />
+      </mesh>
+      {/* Head tucked on top */}
+      <mesh position={[0.1, 0.16, 0.05]} scale={[1, 0.85, 1]}>
+        <sphereGeometry args={[0.08, 16, 12]} />
+        <meshStandardMaterial color={color} roughness={0.95} />
+      </mesh>
+      {/* Ears */}
+      <mesh position={[0.07, 0.23, 0.02]} rotation={[0, 0, 0.3]}>
+        <coneGeometry args={[0.025, 0.05, 4]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      <mesh position={[0.13, 0.23, 0.06]} rotation={[0, 0, -0.3]}>
+        <coneGeometry args={[0.025, 0.05, 4]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      {/* Tail wrapped round the front */}
+      <mesh position={[-0.02, 0.05, 0.14]} rotation={[0, 0.2, Math.PI / 2]}>
+        <cylinderGeometry args={[0.02, 0.025, 0.3, 10]} />
+        <meshStandardMaterial color={color} roughness={0.95} />
+      </mesh>
+    </group>
+  );
+}
+
 /**
- * RoomShell — floor, three walls, baseboard trim, warm corner lamps,
- * cool back-wall accent. Phase 1 of the arcade-room build. Furniture
- * from Phase 2 (sofa, pool table, Hot Wheels shelf, One Piece poster)
- * mounts inside this group.
+ * RoomShell — open-sided diorama ported from the FixMyHair clinic hero:
+ * a floating rounded plinth, a floor slab, a back wall + left return wall
+ * (both real boxes with rounded edges so the soft light catches them),
+ * a dado band + cap along the back wall, no ceiling, no front/right walls.
+ * Lighting lives at Canvas root (3 big soft directionals + hemisphere).
  */
 function RoomShell() {
-  const { size, height, floorY } = ROOM;
-  const ceilY = floorY + height;
-  const midY = (floorY + ceilY) / 2;
-  const half = size / 2;
+  const { size: W, depth: D, height: H, floorY } = ROOM;
+  const hw = W / 2;
+  const hd = D / 2;
+  const wallT = 0.17;        // clinic wall thickness
+  const dadoH = 0.83;        // clinic dado height
+  const R = 0.04;            // rounded-edge radius (bevel look)
+  const backZ = -hd + wallT; // inner face of the back wall
 
   return (
     <group>
-      {/* Floor — warm dark wood */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, floorY, 0]} receiveShadow>
-        <planeGeometry args={[size, size]} />
-        <meshStandardMaterial color="#1e1510" roughness={0.95} />
+      {/* Floating plinth — rounded, slightly larger than the floor */}
+      <RoundedBox args={[W + 0.5, 0.3, D + 0.5]} radius={0.09} smoothness={4}
+        position={[0, floorY - 0.05 - 0.15, 0]} receiveShadow castShadow>
+        <meshStandardMaterial color={PAL.plinth} roughness={0.62} />
+      </RoundedBox>
+
+      {/* Floor slab */}
+      <RoundedBox args={[W, 0.1, D]} radius={0.02} smoothness={3}
+        position={[0, floorY - 0.05, 0]} receiveShadow>
+        <meshStandardMaterial color={PAL.floor} roughness={0.62} />
+      </RoundedBox>
+      {/* Area rug under the sofa */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.9, floorY + 0.004, 0.5]} receiveShadow>
+        <planeGeometry args={[3.6, 2.4]} />
+        <meshStandardMaterial color="#2b2630" roughness={0.98} />
       </mesh>
 
-      {/* Rug under the cabinet — tiny patch of warmth so the arcade reads as grounded */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, floorY + 0.001, 0.2]}>
-        <planeGeometry args={[4, 3]} />
-        <meshStandardMaterial color="#2a1618" roughness={1} />
+      {/* Back wall — solid rounded slab */}
+      <RoundedBox args={[W, H, wallT]} radius={R} smoothness={3}
+        position={[0, floorY + H / 2, -hd + wallT / 2]} receiveShadow castShadow>
+        <meshStandardMaterial color={PAL.wall} roughness={0.62} />
+      </RoundedBox>
+
+      {/* Left wall — solid rounded slab, full depth */}
+      <RoundedBox args={[wallT, H, D]} radius={R} smoothness={3}
+        position={[-hw + wallT / 2, floorY + H / 2, 0]} receiveShadow castShadow>
+        <meshStandardMaterial color={PAL.wall} roughness={0.62} />
+      </RoundedBox>
+
+      {/* Right wall — single-sided plane facing INTO the room. The iso camera
+          sits outside it on +x, sees its back face (culled) and looks straight
+          through; the shelf mounted on it stays visible. Dollhouse cut-away. */}
+      <mesh rotation={[0, -Math.PI / 2, 0]} position={[hw - 0.01, floorY + H / 2, 0]} receiveShadow>
+        <planeGeometry args={[D, H]} />
+        <meshStandardMaterial color={PAL.wall} roughness={0.62} side={THREE.FrontSide} />
       </mesh>
 
-      {/* Back wall */}
-      <mesh position={[0, midY, -half]} receiveShadow>
-        <planeGeometry args={[size, height]} />
-        <meshStandardMaterial color="#17181c" roughness={0.95} />
+      {/* Dado band + cap along the back wall */}
+      <mesh position={[0, floorY + dadoH / 2, backZ + 0.025]} receiveShadow>
+        <boxGeometry args={[W - 0.34, dadoH, 0.05]} />
+        <meshStandardMaterial color={PAL.dado} roughness={0.62} />
       </mesh>
-      {/* Left wall */}
-      <mesh rotation={[0, Math.PI / 2, 0]} position={[-half, midY, 0]} receiveShadow>
-        <planeGeometry args={[size, height]} />
-        <meshStandardMaterial color="#1a1a1e" roughness={0.95} />
-      </mesh>
-      {/* Right wall */}
-      <mesh rotation={[0, -Math.PI / 2, 0]} position={[half, midY, 0]} receiveShadow>
-        <planeGeometry args={[size, height]} />
-        <meshStandardMaterial color="#1a1a1e" roughness={0.95} />
-      </mesh>
-      {/* Ceiling — darker, keeps bounce light moody */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, ceilY, 0]}>
-        <planeGeometry args={[size, size]} />
-        <meshStandardMaterial color="#0a0a0e" roughness={1} />
+      <mesh position={[0, floorY + dadoH + 0.025, backZ + 0.035]} castShadow>
+        <boxGeometry args={[W - 0.34, 0.05, 0.07]} />
+        <meshStandardMaterial color={PAL.cap} roughness={0.62} />
       </mesh>
 
-      {/* Baseboards (thin dark strips where walls meet floor) */}
-      <mesh position={[0, floorY + 0.08, -half + 0.01]}>
-        <boxGeometry args={[size, 0.15, 0.03]} />
-        <meshStandardMaterial color="#0a0a0c" />
+      {/* Baseboards (back + left) */}
+      <mesh position={[0, floorY + 0.06, backZ + 0.015]}>
+        <boxGeometry args={[W - 0.34, 0.12, 0.03]} />
+        <meshStandardMaterial color={PAL.trim} roughness={0.62} />
       </mesh>
-      <mesh position={[-half + 0.01, floorY + 0.08, 0]}>
-        <boxGeometry args={[0.03, 0.15, size]} />
-        <meshStandardMaterial color="#0a0a0c" />
-      </mesh>
-      <mesh position={[half - 0.01, floorY + 0.08, 0]}>
-        <boxGeometry args={[0.03, 0.15, size]} />
-        <meshStandardMaterial color="#0a0a0c" />
+      <mesh position={[-hw + wallT + 0.015, floorY + 0.06, 0]}>
+        <boxGeometry args={[0.03, 0.12, D - 0.34]} />
+        <meshStandardMaterial color={PAL.trim} roughness={0.62} />
       </mesh>
 
-      {/* Warm lamp spots (front-left + front-right ceiling corners) */}
-      <pointLight
-        position={[-half + 0.6, ceilY - 0.5, half - 0.6]}
-        color="#f5a860"
-        intensity={1.6}
-        distance={9}
-        decay={2}
-        castShadow
-      />
-      <pointLight
-        position={[half - 0.6, ceilY - 0.5, half - 0.6]}
-        color="#f5a860"
-        intensity={1.6}
-        distance={9}
-        decay={2}
-      />
-      {/* Cool rim light bouncing off the back wall */}
-      <pointLight
-        position={[0, ceilY - 0.5, -half + 0.8]}
-        color="#4a7eff"
-        intensity={0.9}
-        distance={7}
-        decay={2}
-      />
+      {/* Pair of wall lamps on the back wall (outboard of the art/TV) */}
+      {[-4.45, 4.6].map((lx) => (
+        <group key={lx} position={[lx, floorY + H - 0.5, backZ]}>
+          <mesh position={[0, 0, 0.1]}>
+            <boxGeometry args={[0.07, 0.07, 0.22]} />
+            <meshStandardMaterial color="#8a9099" roughness={0.4} metalness={0.35} />
+          </mesh>
+          <mesh position={[0, 0.07, 0.22]} castShadow>
+            <sphereGeometry args={[0.16, 16, 16]} />
+            <meshStandardMaterial color="#f2f2ee" roughness={0.62} emissive="#fff3dc" emissiveIntensity={0.25} />
+          </mesh>
+        </group>
+      ))}
 
-      {/* Glowing lamp placeholders so the light sources read on the ceiling */}
-      <mesh position={[-half + 0.6, ceilY - 0.1, half - 0.6]}>
-        <sphereGeometry args={[0.08, 12, 12]} />
-        <meshStandardMaterial color="#ffcf90" emissive="#ffcf90" emissiveIntensity={1.5} toneMapped={false} />
-      </mesh>
-      <mesh position={[half - 0.6, ceilY - 0.1, half - 0.6]}>
-        <sphereGeometry args={[0.08, 12, 12]} />
-        <meshStandardMaterial color="#ffcf90" emissive="#ffcf90" emissiveIntensity={1.5} toneMapped={false} />
-      </mesh>
-
-      {/* ─── Phase 2 furniture ─── */}
-      <PoolTable position={[-3.2, floorY, 1.4]} rotation={[0, 0.25, 0]} />
-      <Sofa position={[3.0, floorY, 1.3]} rotation={[0, -Math.PI / 3, 0]} />
-      <HotWheelsShelf wallX={half - 0.02} y={1.4} />
-      {/* 5-panel wall art — centred on back wall above the arcade */}
+      {/* ─── BACK WALL, left → right (per sketch) ─── */}
+      {/* Cat feeder in the back-left corner */}
+      <CatFeeder position={[-hw + 0.75, floorY, backZ + 0.4]} rotation={[0, 0.35, 0]} />
+      {/* TV + black glass table + PS5 + cable */}
+      <TVWall x={-2.4} wallZ={backZ} floorY={floorY} />
+      {/* Cat house with the cat asleep inside, entrance to the room */}
+      <CatHouse position={[-0.55, floorY, backZ + 0.45]} rotation={[0, 0.15, 0]} />
+      <SleepingCat position={[-0.55, floorY + 0.02, backZ + 0.45]} rotation={[0, 0.9, 0]} />
+      {/* Arcade cabinet is mounted at Canvas root at CAB_POS (needs pointer events) */}
+      {/* Big One Piece 5-panel wall art — right of the arcade */}
       <Suspense fallback={null}>
-        <MultiPanelWallArt x={0} y={2.3} />
+        <MultiPanelWallArt x={3.3} y={floorY + 1.62} />
       </Suspense>
 
-      {/* ─── Phase 3 furniture ─── */}
-      {/* 3 corner floor speakers (per sketch) */}
-      <Speaker position={[-half + 0.5, floorY, half - 0.5]} rotation={[0, Math.PI / 5, 0]} />
-      <Speaker position={[half - 0.5, floorY, half - 0.5]} rotation={[0, -Math.PI / 5, 0]} />
-      <Speaker position={[-half + 0.5, floorY, -half + 0.5]} rotation={[0, 2 * Math.PI / 3, 0]} />
+      {/* ─── LEFT WALL: Hot Wheels collection shelf ─── */}
+      <HotWheelsShelf wallX={-hw + wallT + 0.02} y={1.05} />
 
-      {/* Cat house + cat, tucked right of the sofa */}
-      <CatHouse position={[4.1, floorY, -1.4]} rotation={[0, -Math.PI / 3, 0]} />
-      <Cat position={[3.6, floorY, -0.8]} rotation={[0, -Math.PI / 2.5, 0]} />
+      {/* ─── RIGHT WALL: anime action-figure shelf (wall itself is see-through) ─── */}
+      <AnimeShelf wallX={hw - 0.04} y={1.3} z={-0.4} />
 
-      {/* Popcorn machine — left wall between pool table and corner */}
-      <PopcornMachine position={[-half + 0.8, floorY, -1.0]} rotation={[0, Math.PI / 2.5, 0]} />
+      {/* ─── FLOOR ─── */}
+      {/* Sofa in the middle, facing the TV (-z) */}
+      <Sofa position={[-1.0, floorY, 0.55]} rotation={[0, Math.PI, 0]} />
+      {/* Pool table behind the sofa, toward the open front */}
+      <PoolTable position={[-0.8, floorY, 2.3]} rotation={[0, 0, 0]} />
 
-      {/* Anime figure shelf — right wall, further back than Hot Wheels */}
-      <AnimeShelf wallX={half - 0.02} y={2.2} />
-
-      {/* Window — back wall, left of arcade (balances One Piece on the right) */}
-      <Window x={-2.5} y={1.7} />
+      {/* Three speakers at the three far corners */}
+      <Speaker position={[-hw + 0.55, floorY, -hd + 0.75]} rotation={[0, Math.PI / 4 + Math.PI / 2, 0]} />
+      <Speaker position={[hw - 0.55, floorY, -hd + 0.75]} rotation={[0, -Math.PI / 4 - Math.PI / 2, 0]} />
+      <Speaker position={[-hw + 0.55, floorY, hd - 0.55]} rotation={[0, Math.PI / 4, 0]} />
     </group>
   );
 }
@@ -1279,18 +1549,27 @@ function CameraRig({ mode, reduceMotion }) {
     const aspect = size.width / Math.max(1, size.height);
     // Play-mode framing tuned for the realistic 0.45× cabinet — the screen
     // face sits around (0, -0.18, -0.07), so camera y hovers near that line.
-    let z, y;
-    if (aspect >= 1.4) { z = 2.05; y = 0.1; }
-    else if (aspect >= 1.0) { z = 2.35; y = 0.1; }
-    else if (aspect >= 0.7) { z = 2.85; y = 0.15; }
-    else { z = 3.65; y = 0.2; }
-    playTarget.current.set(0, y, z);
+    // Dolly in front of the upright cabinet's screen (world ≈ PLAY_LOOK).
+    let dz, dy;
+    if (aspect >= 1.4) { dz = 1.45; dy = 0.05; }
+    else if (aspect >= 1.0) { dz = 1.65; dy = 0.05; }
+    else if (aspect >= 0.7) { dz = 2.0; dy = 0.1; }
+    else { dz = 2.6; dy = 0.15; }
+    playTarget.current.set(PLAY_LOOK.x, PLAY_LOOK.y + dy, PLAY_LOOK.z + dz);
 
     const targetPos = (mode === "playing" || mode === "dead") ? playTarget.current : IDLE_POS;
     const targetLook = (mode === "playing" || mode === "dead") ? PLAY_LOOK : IDLE_LOOK;
     const t = reduceMotion ? 1 : 0.08;
     camera.position.lerp(targetPos, t);
     look.current.lerp(targetLook, t);
+
+    // Lens: long/narrow in idle (near-isometric), normal when dollied in to play.
+    const targetFov = (mode === "playing" || mode === "dead") ? PLAY_FOV : IDLE_FOV;
+    const nextFov = THREE.MathUtils.lerp(camera.fov, targetFov, t);
+    if (Math.abs(nextFov - camera.fov) > 0.01) {
+      camera.fov = nextFov;
+      camera.updateProjectionMatrix();
+    }
 
     if (shake.amp > 0.001 && !reduceMotion) {
       const n = performance.now() * 0.07;
@@ -1409,26 +1688,45 @@ export default function ConsoleScene() {
       }
     >
       <Canvas
-        shadows
+        shadows={{ type: THREE.PCFSoftShadowMap }}
         dpr={[1, 2]}
-        camera={{ position: IDLE_POS.toArray(), fov: 35 }}
-        gl={{ antialias: true, alpha: !inGame }}
+        camera={{ position: IDLE_POS.toArray(), fov: IDLE_FOV, near: 0.1, far: 120 }}
+        gl={{
+          antialias: true,
+          alpha: !inGame,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.05,
+        }}
         onPointerDown={(e) => {
           // Only flap when clicking on empty canvas during play — joystick/button events stopPropagation
           if (mode === "playing") flap();
         }}
       >
         {inGame && <color attach="background" args={["#0a0d14"]} />}
-        {/* Lighting: moody base + warm/cool point lights live inside RoomShell */}
-        <ambientLight intensity={0.18} />
+
+        {/* Lighting rig ported from the FixMyHair clinic hero:
+            3 big soft lights (warm key / cool fill / warm top-edge) + a pale
+            sky-ish hemisphere standing in for the clinic's world colour.
+            No point lights, no HDRI — soft, even, matte. */}
+        <hemisphereLight args={["#cfd6e0", "#24262c", 0.5]} />
         <directionalLight
-          position={[4, 5, 3]}
-          intensity={0.55}
+          position={[-6, 9, 7]}
+          intensity={2.2}
+          color="#ffe4c8"
           castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-radius={7}
+          shadow-bias={-0.00015}
+          shadow-camera-left={-7}
+          shadow-camera-right={7}
+          shadow-camera-top={7}
+          shadow-camera-bottom={-7}
+          shadow-camera-near={1}
+          shadow-camera-far={40}
         />
-        <directionalLight position={[-3, 2, -2]} intensity={0.25} color="#4a9eff" />
+        <directionalLight position={[7, 6, 2]} intensity={1.1} color="#d2e6ff" />
+        <directionalLight position={[0, 9, -6]} intensity={1.5} color="#fff4e0" />
 
         {/* Phase 1 — room shell only. Fades out while the game is in play */}
         <Suspense fallback={null}>
@@ -1438,28 +1736,22 @@ export default function ConsoleScene() {
         <CameraRig mode={mode} reduceMotion={reduceMotion} />
 
         <Suspense fallback={null}>
-          <Float
-            speed={reduceMotion || inGame ? 0 : 1.1}
-            rotationIntensity={reduceMotion || inGame ? 0 : 0.15}
-            floatIntensity={reduceMotion || inGame ? 0 : 0.4}
-          >
-            <Console
-              reduceMotion={reduceMotion}
-              mode={mode}
-              setMode={setMode}
-              flapRef={flapRef}
-              onScore={setScore}
-              onDeath={onDeath}
-            />
-          </Float>
-          <ContactShadows
-            position={[0, -0.75, 0]}
-            opacity={inGame ? 0 : 0.55}
-            scale={6}
-            blur={2.4}
-            far={2.5}
+          {/* No Float — a 1.9 m cabinet stands on the floor */}
+          <Console
+            reduceMotion={reduceMotion}
+            mode={mode}
+            setMode={setMode}
+            flapRef={flapRef}
+            onScore={setScore}
+            onDeath={onDeath}
           />
-          <Environment preset="city" />
+          <ContactShadows
+            position={[0, ROOM.floorY + 0.01, 0]}
+            opacity={inGame ? 0 : 0.4}
+            scale={14}
+            blur={2.4}
+            far={3}
+          />
         </Suspense>
       </Canvas>
 
@@ -1611,9 +1903,19 @@ export default function ConsoleScene() {
                   </>
                 ) : (
                   <>
-                    <p className="text-sm text-[#2997ff] mb-5">
-                      → saved locally · pending Mohammad's approval
+                    <p className="text-sm text-[#2997ff] mb-2">
+                      → saved on this device
                     </p>
+                    <a
+                      href={`mailto:shaikh.mohammad1099@gmail.com?subject=${encodeURIComponent(
+                        `Flappy Hall of Fame: ${playerName.trim()} scored ${lastRun}`
+                      )}&body=${encodeURIComponent(
+                        `Name: ${playerName.trim()}\nScore: ${lastRun}\n\nPlease add me to the Hall of Fame.`
+                      )}`}
+                      className="block text-[11px] text-[#9aa3b5] underline hover:text-white mb-5"
+                    >
+                      email it to Mohammad for the Hall of Fame →
+                    </a>
                     <div className="grid grid-cols-2 gap-2.5">
                       <button
                         onClick={replay}

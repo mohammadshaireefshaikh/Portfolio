@@ -13,6 +13,7 @@ export default function Footer() {
           <a href={personal.github} target="_blank" rel="noopener noreferrer" className="text-xs text-[#555] hover:text-[#86868b] transition-colors">GitHub</a>
           <a href={personal.linkedin} target="_blank" rel="noopener noreferrer" className="text-xs text-[#555] hover:text-[#86868b] transition-colors">LinkedIn</a>
           <a href={`mailto:${personal.email}`} className="text-xs text-[#555] hover:text-[#86868b] transition-colors">Email</a>
+          <a href="/privacy.html" className="text-xs text-[#555] hover:text-[#86868b] transition-colors">Privacy</a>
         </div>
       </div>
     </footer>

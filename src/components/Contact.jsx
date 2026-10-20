@@ -13,32 +13,18 @@ export default function Contact() {
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-
-  try {
-    const res = await fetch("https://formspree.io/f/YOUR_FORM_ID", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(form),
-    });
-
-    if (res.ok) {
-      setSent(true);
-      setForm({ name: "", email: "", message: "" });
-    } else {
-      alert("Something went wrong. Please try again.");
-    }
-  } catch (error) {
-    alert("Network error. Please try again.");
-  } finally {
+  // No backend: compose the message in the visitor's own mail client.
+  // Nothing is stored or sent anywhere except their email provider.
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const subject = encodeURIComponent(`Portfolio enquiry from ${form.name}`);
+    const body = encodeURIComponent(`${form.message}\n\n— ${form.name}\n${form.email}`);
+    window.location.href = `mailto:${personal.email}?subject=${subject}&body=${body}`;
+    setSent(true);
+    setForm({ name: "", email: "", message: "" });
     setLoading(false);
-  }
-};
+  };
 
   const mono = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" };
 
@@ -105,8 +91,8 @@ export default function Contact() {
             {sent ? (
               <div className="flex flex-col gap-1.5 text-sm">
                 <p className="text-[#60605c]">$ send message</p>
-                <p className="text-[#2997ff]">→ transmitted · 200 OK</p>
-                <p className="text-[#ecece8]">I'll be in touch soon.</p>
+                <p className="text-[#2997ff]">→ opened in your mail app</p>
+                <p className="text-[#ecece8]">Hit send there and I'll be in touch soon.</p>
                 <span className="inline-block w-2 h-4 bg-[#2997ff] mt-1 animate-pulse" />
               </div>
             ) : (
@@ -161,7 +147,8 @@ export default function Contact() {
 
                 <div className="flex items-center justify-between gap-4 pt-2">
                   <p className="text-[11px] text-[#60605c]">
-                    <span style={promptStyle}>$ </span>Enter to send
+                    <span style={promptStyle}>$ </span>opens your mail app · nothing stored here ·{" "}
+                    <a href="/privacy.html" className="underline hover:text-white">privacy</a>
                   </p>
                   <motion.button
                     type="submit"
