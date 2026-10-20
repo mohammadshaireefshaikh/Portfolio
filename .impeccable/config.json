@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "public/flappy.html"
+        ],
+        "createdAt": "2026-10-20T03:42:43.794Z",
+        "reason": "Flappy game — glow on bird sprite + play-button is intentional retro-arcade/CRT aesthetic matching the portfolio's #0071e3 accent and console scene"
+      },
+      {
+        "rule": "overused-font",
+        "value": "space grotesk",
+        "createdAt": "2026-10-20T03:43:40.343Z",
+        "reason": "portfolio-wide typography — Space Grotesk is the site's established body font (index.html + index.css), Flappy must match"
+      }
+    ]
+  }
+}
