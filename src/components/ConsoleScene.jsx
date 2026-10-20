@@ -642,7 +642,7 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath }) {
   const accent = "#d72d35";
   const bodyDark = "#111113";
   const glow = hovered && mode === "idle";
-  const artwork = useTexture("/img/arcade-dragon.svg");
+  const artwork = useTexture(`${import.meta.env.BASE_URL}img/arcade-dragon.svg`);
   const { profile, sideFace } = useMemo(createCabinetSides, []);
   useEffect(() => () => sideFace.dispose(), [sideFace]);
 
@@ -1715,7 +1715,7 @@ export default function ConsoleScene() {
       }
     >
       <Canvas
-        shadows={{ type: THREE.PCFSoftShadowMap }}
+        shadows={{ type: THREE.PCFShadowMap }}
         dpr={[1, 2]}
         camera={{ position: IDLE_POS.toArray(), fov: IDLE_FOV, near: 0.1, far: 120 }}
         gl={{
