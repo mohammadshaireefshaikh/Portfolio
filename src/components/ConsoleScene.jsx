@@ -8,8 +8,9 @@ import { useReducedMotion } from "framer-motion";
 // Camera targets
 const IDLE_POS = new THREE.Vector3(2.5, 2.5, 4);
 const IDLE_LOOK = new THREE.Vector3(0, 0, 0);
-const PLAY_POS = new THREE.Vector3(0, 0.75, 2.4);
-const PLAY_LOOK = new THREE.Vector3(0, 0.55, -0.1);
+// PLAY_POS is now computed per-viewport inside CameraRig so narrow phones
+// pull back far enough to actually show the console body around the screen.
+const PLAY_LOOK = new THREE.Vector3(0, 0.4, -0.1);
 
 // ─── Audio (Web Audio API, no files) ──────────────────────────
 let audioCtx = null;
@@ -481,17 +482,27 @@ function Button({ position, color }) {
 }
 
 function CameraRig({ mode, reduceMotion }) {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   const look = useRef(new THREE.Vector3().copy(IDLE_LOOK));
+  const playTarget = useRef(new THREE.Vector3());
 
   useFrame((_, dt) => {
-    const targetPos = mode === "playing" ? PLAY_POS : IDLE_POS;
+    // Responsive play distance — pull further back on narrow viewports so the
+    // whole console (not just the screen face) stays in frame.
+    const aspect = size.width / Math.max(1, size.height);
+    let z, y;
+    if (aspect >= 1.4) { z = 3.4; y = 0.9; }        // wide desktop
+    else if (aspect >= 1.0) { z = 3.8; y = 0.9; }   // laptop / square
+    else if (aspect >= 0.7) { z = 4.6; y = 1.0; }   // tablet / small laptop
+    else { z = 5.6; y = 1.1; }                       // phone portrait
+    playTarget.current.set(0, y, z);
+
+    const targetPos = mode === "playing" ? playTarget.current : IDLE_POS;
     const targetLook = mode === "playing" ? PLAY_LOOK : IDLE_LOOK;
     const t = reduceMotion ? 1 : 0.08;
     camera.position.lerp(targetPos, t);
     look.current.lerp(targetLook, t);
 
-    // Screen shake (only in play mode, decays quickly)
     if (shake.amp > 0.001 && !reduceMotion) {
       const n = performance.now() * 0.07;
       camera.position.x += Math.sin(n) * shake.amp;
@@ -550,7 +561,17 @@ export default function ConsoleScene() {
     mode === "playing" ? "fixed inset-0 z-50" : "relative w-full h-full";
 
   return (
-    <div className={containerClass} style={mode === "playing" ? { background: "#000" } : undefined}>
+    <div
+      className={containerClass}
+      style={
+        mode === "playing"
+          ? {
+              background:
+                "radial-gradient(ellipse at center, #0f1420 0%, #050507 70%, #000 100%)",
+            }
+          : undefined
+      }
+    >
       <Canvas
         shadows
         dpr={[1, 2]}
@@ -558,7 +579,7 @@ export default function ConsoleScene() {
         gl={{ antialias: true, alpha: mode !== "playing" }}
         onPointerDown={() => { if (mode === "playing") flap(); }}
       >
-        {mode === "playing" && <color attach="background" args={["#000"]} />}
+        {mode === "playing" && <color attach="background" args={["#0a0d14"]} />}
         <ambientLight intensity={0.35} />
         <directionalLight
           position={[4, 5, 3]}
