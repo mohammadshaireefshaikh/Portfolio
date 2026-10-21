@@ -2,7 +2,7 @@ import { Suspense, useRef, useMemo, useEffect, useState } from "react";
 import * as THREE from "three";
 import { createCabinetSides, getArcadeFraming, getRoomFov, getArcadeSignPosition } from "./arcadeGeometry";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Float, ContactShadows, RoundedBox, OrbitControls, useTexture, Html } from "@react-three/drei";
+import { Float, ContactShadows, RoundedBox, OrbitControls, useGLTF, Html } from "@react-three/drei";
 import { X, Volume2, VolumeX, Play, Trophy, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 
@@ -17,7 +17,8 @@ const IDLE_LOOK = new THREE.Vector3(0.2, -0.55, -0.4);
 // Upright arcade cabinet: screen face sits ~1.46 m up on its front. The cabinet
 // stands against the back wall at CAB_POS; PLAY_LOOK is that screen in world.
 const CAB_POS = [1.3, -0.56, -2.65];
-const PLAY_LOOK = new THREE.Vector3(CAB_POS[0], CAB_POS[1] + 1.46, CAB_POS[2] + 0.07);
+// Goliath MK3 screen centre: y ≈ 0.96 + 0.32, recessed ~0.08 behind the front.
+const PLAY_LOOK = new THREE.Vector3(CAB_POS[0], CAB_POS[1] + 1.28, CAB_POS[2] + 0.08);
 const IDLE_FOV = 20;
 const PLAY_FOV = 48; // player POV: wider lens, standing close
 // Idle orbit limits (distance / elevation / swing) so visitors can't dive
@@ -149,8 +150,8 @@ function rumble() {
   lp.frequency.exponentialRampToValueAtTime(45, t0 + dur);
   const g = a.createGain();
   g.gain.setValueAtTime(0.0001, t0);
-  g.gain.exponentialRampToValueAtTime(0.55, t0 + 0.35);
-  g.gain.setValueAtTime(0.55, t0 + 1.1);
+  g.gain.exponentialRampToValueAtTime(0.95, t0 + 0.35);
+  g.gain.setValueAtTime(0.95, t0 + 1.1);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
   src.connect(lp).connect(g).connect(a.destination);
   src.start(t0);
@@ -162,11 +163,26 @@ function rumble() {
   sub.frequency.exponentialRampToValueAtTime(26, t0 + dur);
   const sg = a.createGain();
   sg.gain.setValueAtTime(0.0001, t0);
-  sg.gain.exponentialRampToValueAtTime(0.35, t0 + 0.3);
+  sg.gain.exponentialRampToValueAtTime(0.6, t0 + 0.3);
   sg.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
   sub.connect(sg).connect(a.destination);
   sub.start(t0);
   sub.stop(t0 + dur);
+
+  // THUD — the last slab lands: short sub hit + dull crack at the tail
+  const th = t0 + dur - 0.35;
+  const thud = a.createOscillator();
+  thud.type = "sine";
+  thud.frequency.setValueAtTime(90, th);
+  thud.frequency.exponentialRampToValueAtTime(28, th + 0.45);
+  const tg = a.createGain();
+  tg.gain.setValueAtTime(0.0001, th);
+  tg.gain.exponentialRampToValueAtTime(0.9, th + 0.015);
+  tg.gain.exponentialRampToValueAtTime(0.0001, th + 0.55);
+  thud.connect(tg).connect(a.destination);
+  thud.start(th);
+  thud.stop(th + 0.6);
+  setTimeout(() => { noise(0.18, 0.5, 900, 120); quake.amp = Math.max(quake.amp, 0.3); }, (dur - 0.35) * 1000);
 
   // Ice crackles while the slabs let go
   for (let i = 0; i < 7; i++) {
@@ -791,15 +807,11 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath, showS
     };
   }, [hovered, mode]);
 
-  const accent = "#d72d35";
-  const bodyDark = "#111113";
   const glow = hovered && mode === "idle";
-  const artwork = useTexture(`${import.meta.env.BASE_URL}img/arcade-dragon.svg`);
-  const { profile, sideFace } = useMemo(createCabinetSides, []);
-  useEffect(() => () => sideFace.dispose(), [sideFace]);
 
-  // Profiled arcade cabinet. Local origin = floor, centre; faces +z.
-  // Overall approximately 0.86 w × 2.02 h × 0.9 d.
+  // Electrocoin Goliath MK3 by Delinx (Sketchfab, CC-BY-4.0). Local origin =
+  // floor, centre; faces +z after the +90° yaw (source faces -x).
+  // Footprint 0.72 w × 1.96 h × 0.89 d.
   return (
     <group
       ref={group}
@@ -810,7 +822,7 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath, showS
       onClick={startGame}
     >
       {mode === "idle" && !hasPlayed && showSign && (
-        <Html position={[0, 2.34, 0]} center calculatePosition={getArcadeSignPosition} zIndexRange={[20, 0]}>
+        <Html position={[0, 2.28, 0]} center calculatePosition={getArcadeSignPosition} zIndexRange={[20, 0]}>
           {/* pointerup + touch-action:manipulation: phones sometimes never
               deliver `click` here (scroll-intent heuristics, 300 ms delay);
               startGame is idempotent so both firing is harmless. */}
@@ -828,87 +840,48 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath, showS
           </button>
         </Html>
       )}
-      {/* Raised base and profiled side walls with red edge banding. */}
-      <RoundedBox args={[0.85, 0.3, 0.83]} position={[0, 0.15, 0]} radius={0.008}>
-        <meshStandardMaterial color="#170d10" roughness={0.65} />
-      </RoundedBox>
-      <mesh position={[0, 0.285, 0.421]}>
-        <boxGeometry args={[0.85, 0.018, 0.012]} /><meshStandardMaterial color={accent} />
-      </mesh>
-      {[-1, 1].map((side) => (
-        <group key={side} position={[side * 0.405, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-          <mesh castShadow receiveShadow>
-            <extrudeGeometry args={[profile, { depth: 0.028, bevelEnabled: false }]} />
-            <meshStandardMaterial color={accent} roughness={0.5} />
-          </mesh>
-          <mesh geometry={sideFace} position={[0, 0, side < 0 ? 0.029 : -0.001]}>
-            <meshStandardMaterial map={artwork} side={THREE.DoubleSide} roughness={0.7} />
-          </mesh>
-        </group>
-      ))}
-      {/* Rear and lower front; the monitor has no solid block covering its face. */}
-      <mesh position={[0, 1.13, -0.355]} castShadow>
-        <boxGeometry args={[0.79, 1.72, 0.045]} /><meshStandardMaterial color={bodyDark} roughness={0.7} />
-      </mesh>
-      <RoundedBox args={[0.78, 0.64, 0.66]} position={[0, 0.62, -0.02]} radius={0.008} castShadow>
-        <meshStandardMaterial color={bodyDark} roughness={0.65} />
-      </RoundedBox>
-      {/* Moulded twin-slot coin door. */}
-      <RoundedBox args={[0.29, 0.35, 0.025]} position={[0, 0.62, 0.325]} radius={0.025}>
-        <meshStandardMaterial color="#242427" roughness={0.45} metalness={0.3} />
-      </RoundedBox>
-      {[-0.065, 0.065].map((x) => (
-        <group key={x} position={[x, 0.68, 0.342]}>
-          <mesh><boxGeometry args={[0.08, 0.12, 0.015]} /><meshStandardMaterial color="#08080a" /></mesh>
-          <mesh position={[0, 0.01, 0.01]}><boxGeometry args={[0.025, 0.06, 0.008]} /><meshStandardMaterial color={accent} /></mesh>
-          <mesh position={[0, -0.17, 0]}><boxGeometry args={[0.07, 0.055, 0.012]} /><meshStandardMaterial color="#08080a" /></mesh>
-        </group>
-      ))}
-      {/* Two-player deck with small red sticks and five-button clusters. */}
-      <group position={[0, 1.045, 0.235]} rotation={[-0.10, 0, 0]}>
-        <RoundedBox args={[0.86, 0.105, 0.55]} radius={0.008} castShadow>
-          <meshStandardMaterial color="#230e12" roughness={0.35} metalness={0.15} />
-        </RoundedBox>
-        <mesh position={[0, -0.005, 0.278]}>
-          <boxGeometry args={[0.86, 0.09, 0.012]} /><meshStandardMaterial color={bodyDark} />
-        </mesh>
-        {[-0.045, 0.045].map((y) => (
-          <mesh key={y} position={[0, y, 0.286]}>
-            <boxGeometry args={[0.86, 0.008, 0.012]} /><meshStandardMaterial color={accent} />
-          </mesh>
-        ))}
-        {[-0.205, 0.205].map((x) => (
-          <group key={x} position={[x, 0.06, 0.015]} scale={0.19}>
-            <JoyStick position={[-0.5, 0, 0]} stickColor="#b3b0aa" accent={accent} />
-            {[[0.2, -0.4], [0.8, -0.4], [0.5, 0], [0.2, 0.4], [0.8, 0.4]].map(([bx, bz], i) => (
-              <Button key={i} position={[bx, 0.02, bz]} color={i === 2 ? "#eee5cc" : "#d8ac45"} />
-            ))}
-          </group>
-        ))}
-      </group>
-      {/* Recessed 4:3 display; live face sits in front of its tilted bezel. */}
-      <group position={[0, 1.46, 0.04]} rotation={[-0.28, 0, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[0.76, 0.64, 0.035]} /><meshStandardMaterial color="#09090b" roughness={0.45} />
-        </mesh>
-        <mesh position={[0, 0, 0.019]}>
-          <planeGeometry args={[0.642, 0.487]} /><meshBasicMaterial color="#b68b35" />
-        </mesh>
-        <ScreenFace mode={mode} flapRef={flapRef} onScore={onScore} onDeath={onDeath} />
-      </group>
-      {/* Projecting marquee hood. */}
-      <RoundedBox args={[0.81, 0.22, 0.65]} radius={0.008} position={[0, 1.91, -0.02]} castShadow>
-        <meshStandardMaterial color={bodyDark} roughness={0.55} />
-      </RoundedBox>
-      <Marquee glow={glow} accent={accent} />
-      <group position={[0, -1.024, 0.23]} scale={0.62}>
-        <Marquee glow={false} accent={accent} />
-      </group>
+      <Suspense fallback={null}>
+        <GoliathCabinet mode={mode} flapRef={flapRef} onScore={onScore} onDeath={onDeath} />
+      </Suspense>
       <pointLight position={[0, 1.86, 0.44]} color="#ffd18b" intensity={glow ? 0.4 : 0.2} distance={1.2} />
-      <pointLight ref={screenGlow} position={[0, 1.4, 0.5]} color="#6b9bff" intensity={hovered ? 0.45 : 0.2} distance={2} />
+      <pointLight ref={screenGlow} position={[0, 1.3, 0.55]} color="#6b9bff" intensity={hovered ? 0.45 : 0.2} distance={2} />
     </group>
   );
 }
+
+// Loads the Goliath GLB (Draco + WebP, 600 KB) and pipes the live Flappy
+// CanvasTexture into its "screen" material. Decoder self-hosted in /draco.
+const GOLIATH_URL = `${import.meta.env.BASE_URL}models/goliath.glb`;
+const DRACO_PATH = `${import.meta.env.BASE_URL}draco/`;
+function GoliathCabinet({ mode, flapRef, onScore, onDeath }) {
+  const { scene } = useGLTF(GOLIATH_URL, DRACO_PATH);
+  const tex = useFlappyTexture(mode, flapRef, onScore, onDeath);
+
+  // Clone once so material edits don't leak into drei's cache
+  const cab = useMemo(() => {
+    const s = scene.clone(true);
+    s.traverse((o) => {
+      if (!o.isMesh) return;
+      o.castShadow = true;
+      o.receiveShadow = true;
+      if (o.material?.name === "screen") {
+        const m = o.material.clone();
+        m.map = tex;
+        m.emissiveMap = tex;
+        m.emissive = new THREE.Color("#ffffff");
+        m.emissiveIntensity = 1.1;
+        m.roughness = 0.35;
+        m.toneMapped = true;
+        m.needsUpdate = true;
+        o.material = m;
+      }
+    });
+    return s;
+  }, [scene, tex]);
+
+  return <primitive object={cab} position={[0, 0.96, 0]} rotation={[0, Math.PI / 2, 0]} />;
+}
+useGLTF.preload(GOLIATH_URL, DRACO_PATH);
 
 // ─── Phase 3 furniture ────────────────────────────────────────
 
