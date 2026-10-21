@@ -313,242 +313,6 @@ function Quake({ children }) {
   return <group ref={ref}>{children}</group>;
 }
 
-// Camera-space basis for the intro: a plane in front of the room that fills
-// the idle camera's view. Shared by the slab wall, shockwave, debris, smoke.
-function wallBasis(size) {
-  const dist = IDLE_POS.distanceTo(IDLE_LOOK) - 6;
-  const fov = getRoomFov(size.width, size.height);
-  const halfH = dist * Math.tan(THREE.MathUtils.degToRad(fov / 2)) * 1.15;
-  const halfW = halfH * (size.width / Math.max(1, size.height)) * 1.1;
-  // PerspectiveCamera, not Object3D: only cameras look down -Z.
-  const cam = new THREE.PerspectiveCamera();
-  cam.position.copy(IDLE_POS);
-  cam.lookAt(IDLE_LOOK);
-  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
-  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
-  const center = IDLE_POS.clone().addScaledVector(fwd, dist);
-  return { dist, halfH, halfW, cam, fwd, right, up, center };
-}
-
-// ─── Rock-slab reveal (igloo.inc-style instanced shards) ─────────────
-// A wall of charcoal slabs seals the room. While arming it shivers; on the
-// blast a shockwave runs out from the centre and each slab is knocked
-// radially outward (delay = distance from impact), falls, tumbles, shrinks.
-const ROCK_ROWS = 10;
-function RockReveal({ startedAt, arming, onDone }) {
-  const { size } = useThree();
-  const mesh = useRef(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const done = useRef(false);
-
-  const data = useMemo(() => {
-    const b = wallBasis(size);
-    const { halfH, halfW, cam, fwd, right, up, center } = b;
-    const cell = (2 * halfH) / ROCK_ROWS;
-    const cols = Math.ceil((2 * halfW) / cell) + 1;
-    const maxR = Math.hypot(halfW, halfH);
-    const items = [];
-    for (let r = 0; r < ROCK_ROWS; r++) {
-      for (let c = 0; c < cols; c++) {
-        const x = (c - (cols - 1) / 2) * cell;
-        const y = (r - (ROCK_ROWS - 1) / 2) * cell;
-        const rad = Math.hypot(x, y) || 0.001;
-        items.push({
-          rest: center.clone().addScaledVector(right, x).addScaledVector(up, y),
-          // shockwave front: outward from the impact point
-          delay: (rad / maxR) * 0.55 + Math.random() * 0.12,
-          // knock-back direction = radial in the wall plane
-          kx: (x / rad) * (2.5 + Math.random() * 2),
-          ky: (y / rad) * (2.5 + Math.random() * 2),
-          spin: (Math.random() - 0.5) * 4,
-          seed: Math.random() * Math.PI * 2,
-          depth: 0.6 + Math.random() * 0.5,
-        });
-      }
-    }
-    return { items, cell, right, fwd, up, cam };
-  }, [size.width, size.height]);
-
-  // Per-instance shade so the wall reads as rock, not a flat grid
-  useEffect(() => {
-    if (!mesh.current) return;
-    const col = new THREE.Color();
-    data.items.forEach((_, i) => {
-      col.setHSL(0.6, 0.06, 0.13 + Math.random() * 0.08);
-      mesh.current.setColorAt(i, col);
-    });
-    mesh.current.instanceColor.needsUpdate = true;
-  }, [data]);
-
-  useFrame(() => {
-    if (!mesh.current || done.current) return;
-    const now = performance.now();
-    let allGone = startedAt != null;
-    data.items.forEach((it, i) => {
-      const t = startedAt == null ? -1 : (now - startedAt) / 1000 - it.delay;
-      dummy.position.copy(it.rest);
-      dummy.quaternion.copy(data.cam.quaternion);
-      let s = 1;
-      if (t > 0) {
-        // knocked back radially + toward the viewer, gravity, tumble, shrink
-        dummy.position.addScaledVector(data.right, it.kx * t);
-        dummy.position.addScaledVector(data.up, it.ky * t - 4.9 * t * t);
-        dummy.position.addScaledVector(data.fwd, -2.2 * t);
-        dummy.rotateX(it.spin * t);
-        dummy.rotateZ(it.spin * 0.6 * t + it.seed * 0.02);
-        s = THREE.MathUtils.clamp(1 - (t - 0.9) * 1.6, 0, 1);
-        if (s > 0) allGone = false;
-      } else {
-        allGone = false;
-        if (arming) {
-          // anticipation: the whole wall shivers, harder toward the centre
-          const j = 0.05 + 0.04 * Math.random();
-          dummy.position.addScaledVector(data.right, Math.sin(now * 0.07 + it.seed) * j);
-          dummy.position.addScaledVector(data.up, Math.cos(now * 0.09 + it.seed * 2) * j);
-        } else {
-          // sleeping wall breathes very slightly
-          dummy.position.addScaledVector(data.fwd, Math.sin(now * 0.002 + it.seed) * 0.02);
-        }
-      }
-      dummy.scale.set(s, s, s * it.depth);
-      dummy.updateMatrix();
-      mesh.current.setMatrixAt(i, dummy.matrix);
-    });
-    mesh.current.instanceMatrix.needsUpdate = true;
-    if (allGone) { done.current = true; onDone?.(); }
-  });
-
-  return (
-    <instancedMesh ref={mesh} args={[null, null, data.items.length]} frustumCulled={false} castShadow>
-      <boxGeometry args={[data.cell * 0.97, data.cell * 0.97, data.cell * 0.5]} />
-      <meshStandardMaterial color="#ffffff" roughness={0.95} metalness={0.02} flatShading />
-    </instancedMesh>
-  );
-}
-
-// ─── Blast FX: shockwave ring + debris arcs + lingering smoke ─────────
-const DEBRIS_N = 140;
-const SMOKE_N = 12;
-function softDiscTexture() {
-  const c = document.createElement("canvas");
-  c.width = c.height = 128;
-  const g = c.getContext("2d");
-  const grd = g.createRadialGradient(64, 64, 4, 64, 64, 64);
-  grd.addColorStop(0, "rgba(255,255,255,1)");
-  grd.addColorStop(0.5, "rgba(255,255,255,0.35)");
-  grd.addColorStop(1, "rgba(255,255,255,0)");
-  g.fillStyle = grd;
-  g.fillRect(0, 0, 128, 128);
-  return new THREE.CanvasTexture(c);
-}
-
-function BlastFX({ at }) {
-  const { size } = useThree();
-  const b = useMemo(() => wallBasis(size), [size.width, size.height]);
-  const ring = useRef(null);
-  const debris = useRef(null);
-  const smoke = useRef(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const disc = useMemo(softDiscTexture, []);
-  useEffect(() => () => disc.dispose(), [disc]);
-
-  const parts = useMemo(() => {
-    const d = [];
-    for (let i = 0; i < DEBRIS_N; i++) {
-      const ang = Math.random() * Math.PI * 2;
-      const sp = 5 + Math.random() * 9;
-      d.push({
-        vx: Math.cos(ang) * sp,
-        vy: Math.sin(ang) * sp + 2,
-        vz: -(2 + Math.random() * 7), // toward the viewer
-        spin: (Math.random() - 0.5) * 12,
-        size: 0.12 + Math.random() * 0.22,
-        seed: Math.random() * 6.28,
-      });
-    }
-    const s = [];
-    for (let i = 0; i < SMOKE_N; i++) {
-      const ang = Math.random() * Math.PI * 2;
-      const r = Math.random() * 2.5;
-      s.push({ ox: Math.cos(ang) * r, oy: Math.sin(ang) * r, rise: 0.6 + Math.random(), grow: 5 + Math.random() * 5, seed: Math.random() });
-    }
-    return { d, s };
-  }, []);
-
-  useEffect(() => {
-    if (!debris.current) return;
-    const col = new THREE.Color();
-    parts.d.forEach((_, i) => { col.setHSL(0.6, 0.05, 0.1 + Math.random() * 0.12); debris.current.setColorAt(i, col); });
-    debris.current.instanceColor.needsUpdate = true;
-  }, [parts]);
-
-  useFrame(() => {
-    const t = (performance.now() - at) / 1000;
-    if (t < 0) return;
-    // Shockwave ring: fast expand, fade
-    if (ring.current) {
-      const k = Math.min(1, t / 0.7);
-      const e = 1 - Math.pow(1 - k, 3);
-      const R = 0.5 + e * Math.hypot(b.halfW, b.halfH) * 1.5;
-      ring.current.scale.set(R, R, 1);
-      ring.current.material.opacity = 0.85 * (1 - k);
-      ring.current.visible = k < 1;
-    }
-    // Debris arcs
-    if (debris.current) {
-      parts.d.forEach((p, i) => {
-        const life = THREE.MathUtils.clamp(1 - (t - 1.3) * 1.4, 0, 1);
-        dummy.position.copy(b.center)
-          .addScaledVector(b.right, p.vx * t)
-          .addScaledVector(b.up, p.vy * t - 4.9 * t * t)
-          .addScaledVector(b.fwd, p.vz * t);
-        dummy.rotation.set(p.spin * t, p.seed, p.spin * 0.7 * t);
-        const s = p.size * life;
-        dummy.scale.set(s, s, s);
-        dummy.updateMatrix();
-        debris.current.setMatrixAt(i, dummy.matrix);
-      });
-      debris.current.instanceMatrix.needsUpdate = true;
-    }
-    // Smoke: grow, drift up, linger
-    if (smoke.current) {
-      const fade = THREE.MathUtils.clamp(1 - t / 4.2, 0, 1);
-      smoke.current.children.forEach((sp, i) => {
-        const p = parts.s[i];
-        const g = 1.5 + p.grow * Math.min(1, t / 2.5);
-        sp.position.copy(b.center)
-          .addScaledVector(b.right, p.ox * (1 + t * 0.3))
-          .addScaledVector(b.up, p.oy + p.rise * t)
-          .addScaledVector(b.fwd, -1 - t * 0.4);
-        sp.scale.set(g, g, 1);
-        sp.material.opacity = 0.32 * fade * Math.min(1, t / 0.25);
-        sp.material.rotation = p.seed * 6 + t * 0.15;
-      });
-    }
-  });
-
-  return (
-    <group>
-      <mesh ref={ring} position={b.center} quaternion={b.cam.quaternion}>
-        <ringGeometry args={[0.92, 1, 64]} />
-        <meshBasicMaterial color="#dfeaff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
-      </mesh>
-      <instancedMesh ref={debris} args={[null, null, DEBRIS_N]} frustumCulled={false}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.95} flatShading />
-      </instancedMesh>
-      <group ref={smoke}>
-        {parts.s.map((_, i) => (
-          <sprite key={i}>
-            <spriteMaterial map={disc} color="#3a3e48" transparent opacity={0} depthWrite={false} />
-          </sprite>
-        ))}
-      </group>
-    </group>
-  );
-}
-
 // Scorch: a burn mark on the plinth that fades in on impact and stays.
 function Scorch({ at }) {
   const ref = useRef(null);
@@ -2050,30 +1814,30 @@ export default function ConsoleScene() {
   const [orbitOn, setOrbitOn] = useState(true); // false while CameraRig animates
 
   // ENTER THE ROOM intro: LoadingOverlay fires 'room-enter' on the click.
-  const [introAt, setIntroAt] = useState(null);   // blast timestamp
-  const [arming, setArming] = useState(false);     // anticipation shiver
-  const [blastFx, setBlastFx] = useState(false);   // ring/debris/smoke alive
-  const [introDone, setIntroDone] = useState(false);
+  // Slab wall / shockwave / debris / smoke live in IntroCurtain (full-viewport
+  // overlay). Here: sounds, room quake, scorch. Timeline (ms after click):
+  // 0 charge + tremble · 450 freeze · 540 impact.
+  const [introAt, setIntroAt] = useState(null);   // blast timestamp (scorch)
+  const [introDone, setIntroDone] = useState(false); // curtain cleared → sign
   useEffect(() => {
-    // Timeline (ms after click): 0 charge + shiver · 450 freeze (overlay
-    // flashes white) · 540 impact: shockwave, slabs, debris, smoke, scorch.
     const onEnter = () => {
       charge();
       if (reduceMotion) { setTimeout(impact, 540); setIntroDone(true); return; }
-      setArming(true);
       quake.tremble = 0.04;
-      setTimeout(() => { quake.tremble = 0; setArming(false); }, 450);
+      setTimeout(() => { quake.tremble = 0; }, 450);
       setTimeout(() => {
         impact();
         quake.amp = 0.42;
-        const now = performance.now();
-        setIntroAt(now);
-        setBlastFx(true);
-        setTimeout(() => setBlastFx(false), 4600);
+        setIntroAt(performance.now());
       }, 540);
     };
+    const onRevealed = () => setIntroDone(true);
     window.addEventListener("room-enter", onEnter);
-    return () => window.removeEventListener("room-enter", onEnter);
+    window.addEventListener("room-revealed", onRevealed);
+    return () => {
+      window.removeEventListener("room-enter", onEnter);
+      window.removeEventListener("room-revealed", onRevealed);
+    };
   }, [reduceMotion]);
   const [score, setScore] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
@@ -2217,10 +1981,6 @@ export default function ConsoleScene() {
             {mode !== "playing" && mode !== "dead" && <RoomShell />}
           </Suspense>
         </Quake>
-        {!introDone && !inGame && (
-          <RockReveal startedAt={introAt} arming={arming} onDone={() => setIntroDone(true)} />
-        )}
-        {blastFx && !inGame && <BlastFX at={introAt} />}
         {introAt != null && !inGame && !reduceMotion && (
           <Quake><Scorch at={introAt} /></Quake>
         )}

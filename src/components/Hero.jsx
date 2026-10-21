@@ -1,9 +1,10 @@
 import { lazy, Suspense, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { itemVariants } from "./AnimatedSection";
 import GlassButton from "./GlassButton";
 import HeroChatCTA from "./HeroChatCTA";
 import LoadingOverlay from "./LoadingOverlay";
+import IntroCurtain from "./IntroCurtain";
 import { personal } from "../data/portfolio";
 
 // Lazy-load Three.js scene so first paint isn't blocked by ~400KB of 3D code
@@ -18,7 +19,9 @@ const containerVariants = {
 
 export default function Hero() {
   const [entered, setEntered] = useState(false);
+  const [curtainDone, setCurtainDone] = useState(false);
   const [gameActive, setGameActive] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   // Hide the hero text block while the arcade game is in play/dead mode.
   // ConsoleScene broadcasts 'game-mode' when its internal mode state changes.
@@ -42,6 +45,11 @@ export default function Hero() {
 
       {/* Loading screen (sits above everything until the user clicks ENTER) */}
       {!entered && <LoadingOverlay onEnter={() => setEntered(true)} />}
+      {/* Full-viewport theatre curtain: slab wall over the WHOLE page (nav,
+          text, chat button), blown away on ENTER. Own transparent Canvas. */}
+      {!curtainDone && (
+        <IntroCurtain reduceMotion={reduceMotion} onDone={() => setCurtainDone(true)} />
+      )}
 
       {/* Bottom strip — minimal identity + CTAs. Pinned to the hero's bottom
           edge with a black→transparent fade so it only covers the plinth /
