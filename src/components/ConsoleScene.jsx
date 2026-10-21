@@ -18,7 +18,7 @@ const IDLE_LOOK = new THREE.Vector3(0.2, -0.55, -0.4);
 // stands against the back wall at CAB_POS; PLAY_LOOK is that screen in world.
 const CAB_POS = [1.3, -0.56, -2.65];
 // Goliath MK3 screen centre: y ≈ 0.96 + 0.32, recessed ~0.08 behind the front.
-const PLAY_LOOK = new THREE.Vector3(CAB_POS[0], CAB_POS[1] + 1.28, CAB_POS[2] + 0.08);
+const PLAY_LOOK = new THREE.Vector3(CAB_POS[0], CAB_POS[1] + 1.345, CAB_POS[2] + 0.19);
 const IDLE_FOV = 20;
 const PLAY_FOV = 48; // player POV: wider lens, standing close
 // Idle orbit limits (distance / elevation / swing) so visitors can't dive
@@ -392,8 +392,10 @@ function drawBat(ctx, cx, cy, frame, cell = 3) {
 function useFlappyTexture(mode, flapRef, onScore, onDeath) {
   const texture = useMemo(() => {
     const canvas = document.createElement("canvas");
-    canvas.width = 390;
-    canvas.height = 292;
+    // Portrait 0.8 — drawn on our own plane fitted to the Goliath's bezel
+    // window (0.6 × 0.75 m). Classic Flappy is portrait anyway.
+    canvas.width = 320;
+    canvas.height = 400;
     const t = new THREE.CanvasTexture(canvas);
     t.minFilter = THREE.NearestFilter;
     t.magFilter = THREE.NearestFilter;
@@ -865,21 +867,38 @@ function GoliathCabinet({ mode, flapRef, onScore, onDeath }) {
       o.castShadow = true;
       o.receiveShadow = true;
       if (o.material?.name === "screen") {
+        // The model's CRT goes black; the live game is a separate plane
+        // mounted in the bezel window (see GoliathScreen).
+        o.material = new THREE.MeshBasicMaterial({ color: "#05060a" });
+      } else if (o.material?.name === "ScreenDecal") {
+        // Glass overlay used KHR transmission (refraction → a second, shifted
+        // copy of the game). Keep the bezel art, drop the refraction.
         const m = o.material.clone();
-        m.map = tex;
-        m.emissiveMap = tex;
-        m.emissive = new THREE.Color("#ffffff");
-        m.emissiveIntensity = 1.1;
-        m.roughness = 0.35;
-        m.toneMapped = true;
+        m.transmission = 0;
+        m.transparent = true;
+        m.opacity = 1;
+        m.alphaTest = 0.02;
+        m.depthWrite = false;
         m.needsUpdate = true;
         o.material = m;
+        o.renderOrder = 3;
       }
     });
     return s;
   }, [scene, tex]);
 
-  return <primitive object={cab} position={[0, 0.96, 0]} rotation={[0, Math.PI / 2, 0]} />;
+  return (
+    <>
+      <primitive object={cab} position={[0, 0.96, 0]} rotation={[0, Math.PI / 2, 0]} />
+      {/* Live game, unlit, sitting just in front of the bezel glass. Window in
+          model space: y -0.04..0.81, 0.68 wide, glass at x -0.176 (→ +z here). */}
+      <mesh position={[0, 0.96 + 0.385, 0.19]}>
+        <planeGeometry args={[0.54, 0.68]} />
+        <meshBasicMaterial map={tex} toneMapped={false} />
+      </mesh>
+      <pointLight position={[0, 1.35, 0.45]} color="#7fb0ff" intensity={0.35} distance={1.4} />
+    </>
+  );
 }
 useGLTF.preload(GOLIATH_URL, DRACO_PATH);
 
