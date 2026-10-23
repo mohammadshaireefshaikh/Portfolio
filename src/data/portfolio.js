@@ -109,6 +109,7 @@ export const projects = [
     year: "2026",
     impact: "Live client project",
     image: "/img/rms-interio.jpg",
+    video: "/video/rms-interio.mp4",
     longDescription: [
       "Two surfaces for one studio: a public-facing site that sells the brand's interior work, and a private CRM the team uses to manage leads, quotes, and projects.",
       "Built on Next.js with Supabase as the database and auth layer. Keeps the public pages fast and SEO-friendly while giving the internal team a real workbench instead of spreadsheets.",
@@ -125,6 +126,7 @@ export const projects = [
     year: "2026",
     impact: "Live production site",
     image: "/img/fixmyhair.jpg",
+    video: "/video/fixmyhair.mp4",
     longDescription: [
       "UX, UI, and front-end build for a UK hair restoration service. The site leads with diagnosis before any treatment talk, shows fixed prices up front, and turns every section into a route to a two-minute free assessment.",
       "Key moments: hero + 3D clinic scene, trust bar, before/after slider, 'what describes you?' self-select, six treatment paths, four-step journey, 12-month growth timeline, and transparent pricing.",
@@ -149,6 +151,7 @@ export const projects = [
     year: "2026",
     impact: "Live production site",
     image: "/img/fightmedics-site.jpg",
+    video: "/video/fightmedics-site.mp4",
     longDescription: [
       "Public marketing site for FightMedics — the medical team that covers combat sports events across the UK.",
       "WebGL-driven hero sets the tone, the rest of the site handles the practical stuff: what they do, how to book cover for an event, and who's on the team.",
@@ -181,6 +184,7 @@ export const projects = [
     year: "2026",
     impact: "Live",
     image: "/img/nitya-village.jpg",
+    video: "/video/nitya-village.mp4",
     longDescription: [
       "A playful alternative to the usual static CV: an orbit-able 3D village where each building represents a section of Nitya Singh's portfolio — Profile, Education, Experience, Projects, Publications, Skills, Hall of Fame.",
       "Day / Evening / Night toggles change the lighting, and clicking a building opens its detail panel. Built with Three.js and deployed on Cloudflare Pages for free global hosting.",

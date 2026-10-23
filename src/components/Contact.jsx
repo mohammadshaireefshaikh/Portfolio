@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Send } from "lucide-react";
 import { GitHubIcon, LinkedInIcon } from "./Icons";
-import AnimatedSection, { AnimatedItem, itemVariants } from "./AnimatedSection";
+import AnimatedSection, { AnimatedItem, itemVariants, VIEWPORT } from "./AnimatedSection";
 import { personal } from "../data/portfolio";
 
 export default function Contact() {
@@ -62,7 +62,7 @@ export default function Contact() {
           custom={0.1}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
+          viewport={VIEWPORT}
           className="relative"
           style={{
             background: "#030304",
@@ -186,7 +186,7 @@ export default function Contact() {
           custom={0.15}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true }}
+          viewport={VIEWPORT}
           className="flex flex-wrap items-center justify-between gap-4 mt-6 pt-5 border-t border-white/[0.06]"
           style={mono}
         >

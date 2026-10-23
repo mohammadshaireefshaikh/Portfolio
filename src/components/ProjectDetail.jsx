@@ -2,6 +2,7 @@ import { useEffect, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { X, ExternalLink, ArrowUpRight } from "lucide-react";
 import { GitHubIcon } from "./Icons";
+import { InViewVideo } from "./Projects";
 
 const imgSrc = (path) =>
   `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
@@ -83,11 +84,21 @@ export default function ProjectDetail({ project, onClose }) {
               {/* Image header — only if project has image */}
               {project.image && (
                 <div className="relative w-full h-64 sm:h-80 overflow-hidden">
-                  <img
-                    src={imgSrc(project.image)}
-                    alt={project.title}
-                    className="w-full h-full object-cover"
-                  />
+                  {project.video && !reduceMotion ? (
+                    <InViewVideo
+                      src={imgSrc(project.video)}
+                      poster={imgSrc(project.image)}
+                      title={project.title}
+                      threshold={0.1}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={imgSrc(project.image)}
+                      alt={project.title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                   <div
                     className="absolute inset-0 pointer-events-none"
                     style={{

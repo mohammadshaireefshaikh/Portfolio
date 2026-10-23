@@ -1,7 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, LayoutGrid, List as ListIcon } from "lucide-react";
-import AnimatedSection, { AnimatedItem, itemVariants } from "./AnimatedSection";
+import AnimatedSection, { AnimatedItem, itemVariants, VIEWPORT } from "./AnimatedSection";
 import ProjectDetail from "./ProjectDetail";
 import { projects } from "../data/portfolio";
 
@@ -15,6 +15,39 @@ const pad2 = (n) => String(n + 1).padStart(2, "0");
 
 // Max tilt in degrees. Small by design — depth cue, not toy.
 const TILT_MAX = 6;
+
+// Muted looping preview that only plays while on screen (saves bandwidth +
+// battery; six autoplaying videos off-screen is wasteful). Poster = the
+// project still, so nothing changes until the clip is actually playing.
+export function InViewVideo({ src, poster, title, className, threshold = 0.35 }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) el.play().catch(() => {});
+        else el.pause();
+      },
+      { threshold }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [threshold]);
+  return (
+    <video
+      ref={ref}
+      src={src}
+      poster={poster}
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      aria-label={`${title} — preview video`}
+      className={className}
+    />
+  );
+}
 
 function ProjectCard({ project, index, onOpen }) {
   const reduceMotion = useReducedMotion();
@@ -49,7 +82,7 @@ function ProjectCard({ project, index, onOpen }) {
       variants={itemVariants}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: "-60px" }}
+      viewport={VIEWPORT}
       className="h-full"
     >
     <button
@@ -69,11 +102,20 @@ function ProjectCard({ project, index, onOpen }) {
     >
       {project.image && (
         <div className="w-full h-36 overflow-hidden shrink-0">
-          <img
-            src={imgSrc(project.image)}
-            alt={project.title}
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
-          />
+          {project.video && !reduceMotion ? (
+            <InViewVideo
+              src={imgSrc(project.video)}
+              poster={imgSrc(project.image)}
+              title={project.title}
+              className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
+            />
+          ) : (
+            <img
+              src={imgSrc(project.image)}
+              alt={project.title}
+              className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
+            />
+          )}
         </div>
       )}
 
@@ -138,7 +180,7 @@ function ProjectRow({ project, index, onOpen }) {
       variants={itemVariants}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: "-40px" }}
+      viewport={VIEWPORT}
       className="group grid grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.5fr)_auto] items-center gap-4 md:gap-6 w-full text-left px-4 py-4 border-t border-white/[0.06] hover:bg-white/[0.025] transition-colors duration-150"
       style={mono}
       aria-label={`Open details for ${project.title}`}

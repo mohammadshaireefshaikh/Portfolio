@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import AnimatedSection, { AnimatedItem, itemVariants } from "./AnimatedSection";
+import AnimatedSection, { AnimatedItem, itemVariants, VIEWPORT } from "./AnimatedSection";
 import { skills } from "../data/portfolio";
 
 function SkillGroup({ category, items, groupIndex }) {
@@ -9,7 +9,7 @@ function SkillGroup({ category, items, groupIndex }) {
       custom={groupIndex * 0.08}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: "-40px" }}
+      viewport={VIEWPORT}
       className="flex flex-col gap-4"
     >
       <p className="text-xs font-medium tracking-[0.18em] uppercase text-[#86868b]">

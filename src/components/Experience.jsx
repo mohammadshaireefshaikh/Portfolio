@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import AnimatedSection, { AnimatedItem, itemVariants } from "./AnimatedSection";
+import AnimatedSection, { AnimatedItem, itemVariants, VIEWPORT } from "./AnimatedSection";
 import { experience } from "../data/portfolio";
 
 function ExperienceCard({ role, company, period, location, description, highlights, badge, index }) {
@@ -9,7 +9,7 @@ function ExperienceCard({ role, company, period, location, description, highligh
       custom={index * 0.06}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: "-50px" }}
+      viewport={VIEWPORT}
       className="relative flex gap-3 sm:gap-6"
     >
       <div className="flex flex-col items-center shrink-0 w-4 sm:w-6">

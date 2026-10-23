@@ -1907,8 +1907,21 @@ export default function ConsoleScene() {
   const inGame = mode === "playing" || mode === "dead";
   const containerClass = inGame ? "fixed inset-0 z-50" : "relative w-full h-full";
 
+  // Stop rendering the room once it's scrolled out of view: shadows + orbit
+  // damping at 60 fps behind the page is what made the lower sections stutter.
+  const wrapRef = useRef(null);
+  const [onScreen, setOnScreen] = useState(true);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setOnScreen(e.isIntersecting), { threshold: 0.02 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
     <div
+      ref={wrapRef}
       className={containerClass}
       style={
         inGame
@@ -1917,6 +1930,7 @@ export default function ConsoleScene() {
       }
     >
       <Canvas
+        frameloop={inGame || onScreen ? "always" : "never"}
         shadows={{ type: THREE.PCFShadowMap }}
         dpr={[1, 2]}
         camera={{ position: IDLE_POS.toArray(), fov: IDLE_FOV, near: 0.1, far: 120 }}
