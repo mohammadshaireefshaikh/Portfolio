@@ -182,7 +182,7 @@ function rumble() {
   thud.connect(tg).connect(a.destination);
   thud.start(th);
   thud.stop(th + 0.6);
-  setTimeout(() => { noise(0.18, 0.5, 900, 120); quake.amp = Math.max(quake.amp, 0.3); }, (dur - 0.35) * 1000);
+  setTimeout(() => noise(0.18, 0.5, 900, 120), (dur - 0.35) * 1000); // sound only, no late shake
 
   // Ice crackles while the slabs let go
   for (let i = 0; i < 7; i++) {
@@ -321,7 +321,13 @@ function Quake({ children }) {
         Math.cos(n * 1.37) * a * 0.5,
         Math.sin(n * 0.83) * a * 0.7
       );
-      quake.amp *= Math.exp(-1.6 * dt);
+      // Impact shake is over within ~0.5 s (0.42 → 0.005 at e^-9t).
+      // Several Quake groups share this object: decay once per frame only.
+      const stamp = performance.now() | 0;
+      if (quake.stamp !== stamp) {
+        quake.stamp = stamp;
+        quake.amp *= Math.exp(-9 * dt);
+      }
     } else if (ref.current.position.lengthSq() > 0) {
       ref.current.position.set(0, 0, 0);
     }
@@ -1815,7 +1821,8 @@ export default function ConsoleScene() {
     const onEnter = () => {
       charge();
       if (reduceMotion) { setTimeout(impact, 540); setIntroDone(true); return; }
-      quake.tremble = 0.04;
+      // Shake BEFORE the collapse (anticipation), freeze at 450, impact at 540
+      quake.tremble = 0.07;
       setTimeout(() => { quake.tremble = 0; }, 450);
       setTimeout(() => {
         impact();
@@ -2018,25 +2025,29 @@ export default function ConsoleScene() {
             which eats one-finger scrolling on phones. */}
         <TouchPolicy inGame={inGame} />
 
-        <Suspense fallback={null}>
-          {/* No Float — a 1.9 m cabinet stands on the floor */}
-          <Console
-            reduceMotion={reduceMotion}
-            mode={mode}
-            setMode={setMode}
-            flapRef={flapRef}
-            onScore={setScore}
-            onDeath={onDeath}
-            showSign={introDone}
-          />
-          <ContactShadows
-            position={[0, ROOM.floorY + 0.01, 0]}
-            opacity={inGame ? 0 : 0.4}
-            scale={14}
-            blur={2.4}
-            far={3}
-          />
-        </Suspense>
+        {/* Cabinet (+ its Html sign) and contact shadow ride the same quake
+            group as the room, so nothing stays still while the floor shakes. */}
+        <Quake>
+          <Suspense fallback={null}>
+            {/* No Float — a 1.9 m cabinet stands on the floor */}
+            <Console
+              reduceMotion={reduceMotion}
+              mode={mode}
+              setMode={setMode}
+              flapRef={flapRef}
+              onScore={setScore}
+              onDeath={onDeath}
+              showSign={introDone}
+            />
+            <ContactShadows
+              position={[0, ROOM.floorY + 0.01, 0]}
+              opacity={inGame ? 0 : 0.4}
+              scale={14}
+              blur={2.4}
+              far={3}
+            />
+          </Suspense>
+        </Quake>
       </Canvas>
 
       {mode === "idle" && <HoverLabel />}
