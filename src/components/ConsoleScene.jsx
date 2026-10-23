@@ -326,7 +326,7 @@ function Quake({ children }) {
       const stamp = performance.now() | 0;
       if (quake.stamp !== stamp) {
         quake.stamp = stamp;
-        quake.amp *= Math.exp(-9 * dt);
+        quake.amp *= Math.exp(-5.5 * dt); // 0.5 → ~0 over ~0.9 s, readable on a phone
       }
     } else if (ref.current.position.lengthSq() > 0) {
       ref.current.position.set(0, 0, 0);
@@ -1826,7 +1826,7 @@ export default function ConsoleScene() {
       setTimeout(() => { quake.tremble = 0; }, 450);
       setTimeout(() => {
         impact();
-        quake.amp = 0.42;
+        quake.amp = 0.5;
         setIntroAt(performance.now());
       }, 540);
     };

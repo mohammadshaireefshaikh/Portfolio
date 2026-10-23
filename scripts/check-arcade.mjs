@@ -33,7 +33,7 @@ for (const [width, height] of [[320, 650], [390, 260], [648, 724], [390, 844], [
   }
 }
 assert.ok(Math.abs(getRoomFov(1440, 900) - 20) < 1e-6, 'Desktop room framing stays unchanged');
-assert.ok(getRoomFov(390, 844) > getRoomFov(648, 724), 'Narrow phones need a wider view of the room');
+assert.ok(getRoomFov(375, 325) < getRoomFov(1440, 900), 'Phone room block zooms in so the diorama fills the width');
 assert.ok(getArcadeFraming(648, 724).distance > 1.85, 'Mobile play camera is pulled back');
 sideFace.dispose();
 console.log('Arcade geometry, responsive sign and mobile framing pass at six viewport sizes.');

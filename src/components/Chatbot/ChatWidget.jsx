@@ -209,7 +209,7 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.97 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed bottom-24 right-3 sm:right-5 z-50 flex flex-col"
+            className="fixed bottom-24 left-3 sm:left-5 z-50 flex flex-col"
             style={{
               width: "min(420px, calc(100vw - 24px))",
               height: "min(580px, calc(100dvh - 130px - env(safe-area-inset-bottom)))",
@@ -337,11 +337,11 @@ export default function ChatWidget() {
       <AnimatePresence>
         {showTooltip && !open && !heroCtaVisible && (
           <motion.div
-            initial={{ opacity: 0, x: 12, scale: 0.9 }}
+            initial={{ opacity: 0, x: -12, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 12, scale: 0.9 }}
+            exit={{ opacity: 0, x: -12, scale: 0.9 }}
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed bottom-8 right-24 z-50 pointer-events-none"
+            className="fixed bottom-8 left-24 z-50 pointer-events-none"
           >
             <div
               className="relative px-4 py-2.5 rounded-2xl text-sm font-medium text-white max-w-[calc(100vw_-_7rem)]"
@@ -354,11 +354,11 @@ export default function ChatWidget() {
               Ask me anything about Mohammad
               {/* Arrow */}
               <span
-                className="absolute top-1/2 -right-1.5 w-3 h-3 rotate-45 -translate-y-1/2"
+                className="absolute top-1/2 -left-1.5 w-3 h-3 rotate-45 -translate-y-1/2"
                 style={{
                   background: "#0d0d0d",
-                  borderRight: "1px solid rgba(255,255,255,0.1)",
-                  borderTop: "1px solid rgba(255,255,255,0.1)",
+                  borderLeft: "1px solid rgba(255,255,255,0.1)",
+                  borderBottom: "1px solid rgba(255,255,255,0.1)",
                 }}
               />
             </div>
@@ -371,7 +371,9 @@ export default function ChatWidget() {
         initial={{ opacity: 0, scale: 0.7 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, delay: 1.8, ease: [0.22, 1, 0.36, 1] }}
-        className={`fixed right-4 sm:right-5 z-50 ${heroCtaVisible && !open ? "hidden md:block" : ""}`}
+        // Bottom-LEFT, always visible (owner: "where is my Ask AI button?") —
+        // it used to hide on phones while the hero CTA was on screen.
+        className="fixed left-4 sm:left-5 z-50"
         style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
       >
         {/* Pulsing halo — only when closed. Two rings, phase-offset for continuous breath. */}

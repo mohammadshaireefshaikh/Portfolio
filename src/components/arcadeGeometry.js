@@ -19,9 +19,12 @@ export function getArcadeFraming(width, height) {
   return { distance: Math.max(1.85, 1.35 / (width / height)) * (width < 768 ? 1.08 : 1), offsetY: height * 0.07 };
 }
 
+// Phones: the room sits in a short, wide 40svh block, so ZOOM IN (narrower
+// lens) until the diorama spans the full width — owner wants it big.
 export function getRoomFov(width, height) {
-  const zoomOut = width < 768 ? 1.16 * Math.max(1, 1.05 / (width / Math.max(1, height))) : 1;
-  return THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(10)) * zoomOut));
+  const aspect = width / Math.max(1, height);
+  const zoom = width < 768 ? Math.min(0.72, 0.62 * Math.max(1, aspect / 1.1)) : 1;
+  return THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(10)) * zoom));
 }
 
 const signPosition = new THREE.Vector3();
