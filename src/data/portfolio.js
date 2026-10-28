@@ -99,6 +99,29 @@ export const experience = [
 
 export const projects = [
   {
+    id: "fixmyhair-surgeon-led",
+    title: "FixMyHair — Surgeon-led homepage (in progress)",
+    description: "The direction being built right now: doctor-first homepage, a consultation passport that turns a chat into a booked video consult, and a results page where you judge the twelve-month photos yourself.",
+    tech: ["Static site", "JavaScript", "Booking flow", "Cloudflare", "SEO"],
+    github: null,
+    demo: null,
+    year: "2026",
+    impact: "Featured · in progress",
+    image: "/img/fixmyhair.jpg",
+    video: "/video/fmh-surgeon-led.mp4",
+    longDescription: [
+      "Current work on the FixMyHair site (branch landing/surgeon-led). The homepage opens on Dr Hisham Band performing the procedure, so the first thing a visitor sees is who operates, not a stock model.",
+      "A consultation passport carries what the visitor already told the site into a booked video consultation: the booking is confirmed once, early doctor proof is shown, and nothing is asked twice.",
+      "The results page shows twelve-month photos with the caveats kept in ('individual results vary') and three written prices, never per-graft maths.",
+    ],
+    highlights: [
+      "Doctor-first hero: the surgeon, not a model",
+      "Consultation passport → booked video consult",
+      "Results page with twelve-month photos and honest caveats",
+      "Three fixed prices agreed in writing",
+    ],
+  },
+  {
     id: "rms-interio",
     title: "RMS Interio — Studio Site + CRM",
     description: "Website and internal CRM for a Pune-based interior design studio. Public showcase on the front, lead and project pipeline on the back.",
@@ -364,18 +387,6 @@ export const fixmyhairStudy = {
   ],
   directions: [
     {
-      id: "live",
-      label: "Live site",
-      kicker: "Shipped · fixmyhair.co.uk",
-      title: "Diagnosis first, prices up front",
-      blurb:
-        "The production homepage: a 3D clinic hero, self-select 'what describes you?', six treatment paths, a 12-month growth timeline and transparent pricing. Every section routes to a two-minute free assessment.",
-      tech: ["Next.js", "Three.js", "Twilio", "Cloudflare"],
-      video: "/video/fixmyhair.mp4",
-      poster: "/img/fixmyhair.jpg",
-      cta: { label: "Visit live site", href: "https://fixmyhair.co.uk/" },
-    },
-    {
       id: "surgeon-led",
       label: "Surgeon-led (in progress)",
       kicker: "Current branch · landing/surgeon-led",
@@ -386,6 +397,18 @@ export const fixmyhairStudy = {
       video: "/video/fmh-surgeon-led.mp4",
       poster: "/img/fixmyhair.jpg",
       cta: null,
+    },
+    {
+      id: "live",
+      label: "Live site",
+      kicker: "Shipped · fixmyhair.co.uk",
+      title: "Diagnosis first, prices up front",
+      blurb:
+        "The production homepage: a 3D clinic hero, self-select 'what describes you?', six treatment paths, a 12-month growth timeline and transparent pricing. Every section routes to a two-minute free assessment.",
+      tech: ["Next.js", "Three.js", "Twilio", "Cloudflare"],
+      video: "/video/fixmyhair.mp4",
+      poster: "/img/fixmyhair.jpg",
+      cta: { label: "Visit live site", href: "https://fixmyhair.co.uk/" },
     },
     {
       id: "dark10k",
