@@ -355,7 +355,7 @@ export const projects = [
 export const fixmyhairStudy = {
   client: "Fix My Hair, UK",
   summary:
-    "A UK hair-restoration clinic. Over 2026 I rebuilt the public site around diagnosis-before-sales and fixed prices, then explored four further homepage directions, an ads landing system and the clinic's CRM.",
+    "A UK hair-restoration clinic. Over 2026 I rebuilt the public site around diagnosis-before-sales and fixed prices, then explored further homepage directions, an ads landing system and the clinic's CRM.",
   receipts: [
     { k: "82", v: "pages on one stylesheet" },
     { k: "3", v: "fixed price bands, no per-graft" },
@@ -374,6 +374,18 @@ export const fixmyhairStudy = {
       video: "/video/fixmyhair.mp4",
       poster: "/img/fixmyhair.jpg",
       cta: { label: "Visit live site", href: "https://fixmyhair.co.uk/" },
+    },
+    {
+      id: "surgeon-led",
+      label: "Surgeon-led (in progress)",
+      kicker: "Current branch · landing/surgeon-led",
+      title: "Doctor-first homepage and a results page you judge yourself",
+      blurb:
+        "The direction being built now: Dr Band shown performing the procedure from the first screen, a consultation passport that turns a chat into a booked video consult, and a results page of twelve-month photos with the caveats kept in. Three written prices, no per-graft maths.",
+      tech: ["Static site", "Consultation passport", "Booking flow", "Cloudflare"],
+      video: "/video/fmh-surgeon-led.mp4",
+      poster: "/img/fixmyhair.jpg",
+      cta: null,
     },
     {
       id: "dark10k",

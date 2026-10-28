@@ -31,7 +31,7 @@ export default function FixMyHairStudy() {
           </AnimatedItem>
           <AnimatedItem>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-white tracking-tight">
-              FixMyHair. One client, five directions.
+              FixMyHair. One client, six directions.
             </h2>
           </AnimatedItem>
           <AnimatedItem>
