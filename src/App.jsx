@@ -5,6 +5,7 @@ import About from "./components/About";
 import Skills from "./components/Skills";
 import Experience from "./components/Experience";
 import Projects from "./components/Projects";
+import FixMyHairStudy from "./components/FixMyHairStudy";
 import Contact from "./components/Contact";
 import Footer from "./components/Footer";
 import ChatWidget from "./components/Chatbot/ChatWidget";
@@ -20,6 +21,7 @@ export default function App() {
           <Skills />
           <Experience />
           <Projects />
+          <FixMyHairStudy />
           <Contact />
         </main>
         <Footer />

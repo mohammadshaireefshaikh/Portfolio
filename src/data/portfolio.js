@@ -139,6 +139,7 @@ export const projects = [
       "Twilio-backed messaging for nurture texts and reminders",
       "GMC-registered doctors, CQC-regulated partner facilities",
     ],
+    film: "/video/fixmyhair-demo.mp4",
   },
   {
     id: "fightmedics-site",
@@ -347,3 +348,80 @@ export const projects = [
     ],
   },
 ];
+
+// ─── FixMyHair case study: one client, several directions ───────────
+// Shown on the homepage as a direction switcher. Unreleased designs are
+// shown with the client's permission (see the note rendered in the section).
+export const fixmyhairStudy = {
+  client: "Fix My Hair, UK",
+  summary:
+    "A UK hair-restoration clinic. Over 2026 I rebuilt the public site around diagnosis-before-sales and fixed prices, then explored four further homepage directions, an ads landing system and the clinic's CRM.",
+  receipts: [
+    { k: "82", v: "pages on one stylesheet" },
+    { k: "3", v: "fixed price bands, no per-graft" },
+    { k: "5", v: "ad landing pages" },
+    { k: "0", v: "compliance check failures" },
+  ],
+  directions: [
+    {
+      id: "live",
+      label: "Live site",
+      kicker: "Shipped · fixmyhair.co.uk",
+      title: "Diagnosis first, prices up front",
+      blurb:
+        "The production homepage: a 3D clinic hero, self-select 'what describes you?', six treatment paths, a 12-month growth timeline and transparent pricing. Every section routes to a two-minute free assessment.",
+      tech: ["Next.js", "Three.js", "Twilio", "Cloudflare"],
+      video: "/video/fixmyhair.mp4",
+      poster: "/img/fixmyhair.jpg",
+      cta: { label: "Visit live site", href: "https://fixmyhair.co.uk/" },
+    },
+    {
+      id: "dark10k",
+      label: "Dark 10K",
+      kicker: "Design direction · cinematic",
+      title: "A scroll-scrubbed film in dark gold light",
+      blurb:
+        "Scroll scrubs a pre-rendered film; a headline fills from outline to solid; a small glowing guide hops between sections. Built as a pure function of scroll progress so it never drops frames.",
+      tech: ["Vanilla JS", "Canvas", "GSAP-style easing"],
+      video: "/video/fmh-dark10k.mp4",
+      poster: "/img/fixmyhair.jpg",
+      cta: null,
+    },
+    {
+      id: "chatgpt-hero",
+      label: "Flick-through hero",
+      kicker: "Design direction · story",
+      title: "Gold strands, one drop, a full head of hair",
+      blurb:
+        "A hero you step through one flick at a time: strands pour into a test tube, a drop falls into a pool and the splash rises into hair — the blood-panel-first story told as a sequence rather than a paragraph.",
+      tech: ["Generated film", "Scroll snap", "Vanilla JS"],
+      video: "/video/fmh-chatgpt-hero.mp4",
+      poster: "/img/fixmyhair.jpg",
+      cta: null,
+    },
+    {
+      id: "igloo",
+      label: "WebGL room",
+      kicker: "Design direction · igloo.inc style",
+      title: "One canvas, hair grown in Blender, a frost wipe between scenes",
+      blurb:
+        "A single WebGL canvas drives the whole homepage: procedural crown, glass cubes, follicle ring and strand field, with a frost-edged wipe between scenes. Native scroll, no cursor tricks. Quiz and forms are inert in this preview.",
+      tech: ["Three.js", "postprocessing", "Blender", "Vite"],
+      video: "/video/fmh-igloo.mp4",
+      poster: "/img/fixmyhair.jpg",
+      cta: { label: "Open design preview", href: "labs/fixmyhair/igloo/", internal: true },
+    },
+    {
+      id: "system",
+      label: "CRM + ads",
+      kicker: "Operations · behind the site",
+      title: "Ads landing pages, nurture texts and the clinic CRM",
+      blurb:
+        "Five ad landing pages matched to search intent, Twilio nurture sequences and consultation reminders, and an internal CRM so the clinic runs leads without a separate tool. Shown as a film — these are client-internal.",
+      tech: ["Next.js", "Supabase", "Twilio", "Google Ads"],
+      video: "/video/fixmyhair-demo.mp4",
+      poster: "/img/fixmyhair.jpg",
+      cta: null,
+    },
+  ],
+};

@@ -1,0 +1,124 @@
+/* Copied from fixmyhair-site-main (dark-10k) assets/nav/fmh-nav.css. Keep in sync with the site. */
+/* fmh-nav: the one site header. Dark on every page, logo left, menu centre, call to action right.
+   Desktop shows every link (never behind a burger); phones get a standard three-line burger.
+   Markup lives in _shared/nav.html and is stamped into every page by tools/apply-nav.mjs. */
+.fnav{
+  --fn-bg:rgba(15,14,11,.94);--fn-panel:#1a1916;--fn-text:#f6f1dc;--fn-muted:#b3ae9f;--fn-dim:#8f8a7c;
+  --fn-line:rgba(246,241,220,.09);--fn-accent:#ffed00;--fn-on-accent:#0f0e0b;--fn-edge:var(--edge,var(--fmh-edge,24px));
+  --fn-ease:cubic-bezier(.22,1,.36,1);--fn-row:62px;
+  position:fixed;top:0;left:0;right:0;z-index:150;color:var(--fn-text);background:var(--fn-bg);
+  -webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);
+  border-bottom:1px solid var(--fn-line);transition:transform .32s var(--fn-ease),background .3s var(--fn-ease),border-color .3s var(--fn-ease);
+  font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.2;letter-spacing:0;text-align:left
+}
+.fnav *,.fnav *::before,.fnav *::after{box-sizing:border-box}
+/* resets at zero class weight (:where) so every .fnav-* rule below wins over them */
+:where(.fnav) ul,:where(.fnav) ol{list-style:none;margin:0;padding:0}
+:where(.fnav) a{text-decoration:none;color:inherit}
+:where(.fnav) button{font:inherit;color:inherit;background:none;border:0;margin:0;cursor:pointer;text-transform:none;letter-spacing:inherit}
+.fnav :focus-visible{outline:2px solid var(--fn-accent);outline-offset:3px;border-radius:8px}
+/* constant glass bar: never slides away. The glass lives on ::before so backdrop-filter does not turn the bar
+   into the containing block of the fixed phone drawer. Solid only while the phone menu is open. */
+.fnav::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,rgba(20,19,15,.46),rgba(15,14,11,.3));-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5);border-bottom:1px solid rgba(246,241,220,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 30px -12px rgba(0,0,0,.45);transition:opacity .3s var(--fn-ease)}
+.fnav.is-open::before{opacity:0}
+.fnav.is-hidden{transform:none}
+.fnav:not(.is-open){background:transparent!important;border-bottom-color:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+/* elevated text: a tight contact shadow plus a soft long one, so the words float above whatever scrolls behind */
+.fnav:not(.is-open) .fnav-top,.fnav:not(.is-open) .fnav-tel,.fnav:not(.is-open) .fnav-crumbs{text-shadow:0 1px 1px rgba(0,0,0,.7),0 3px 6px rgba(0,0,0,.6),0 10px 24px rgba(0,0,0,.55)}
+.fnav:not(.is-open) .fnav-logo svg,.fnav:not(.is-open) .fnav-burger{filter:drop-shadow(0 1px 1px rgba(0,0,0,.7)) drop-shadow(0 4px 8px rgba(0,0,0,.55)) drop-shadow(0 10px 22px rgba(0,0,0,.45))}
+.fnav:not(.is-open) .fnav-cta{box-shadow:0 2px 3px rgba(0,0,0,.45),0 8px 20px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.15)}
+/* homepage: clear over the hero film until the first scroll */
+.fnav[data-clear]:not(.is-scrolled):not(.is-open){background:transparent;border-bottom-color:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
+html{scroll-padding-top:100px}
+
+.fnav-row{display:flex;align-items:center;gap:20px;height:var(--fn-row);padding:0 var(--fn-edge)}
+.fnav-logo{display:inline-flex;line-height:0;flex:none}
+.fnav-logo svg{width:72px;height:41px;display:block}
+
+/* the menu: centred between logo and actions */
+.fnav-menu{flex:1;display:flex;justify-content:center;min-width:0}
+.fnav-list{display:flex;align-items:center;gap:2px}
+.fnav-top{position:relative;display:inline-flex;align-items:center;gap:6px;padding:10px 12px;font-size:14.5px;font-weight:500;color:var(--fn-muted);white-space:nowrap;transition:color .25s var(--fn-ease)}
+.fnav-top::after{content:"";position:absolute;left:12px;right:12px;bottom:4px;height:1.5px;background:var(--fn-accent);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--fn-ease)}
+.fnav-top:hover,.fnav-top[aria-current="page"],.fnav-top.is-on,.fnav-has.is-on>.fnav-top{color:var(--fn-text)}
+.fnav-top:hover::after,.fnav-top[aria-current="page"]::after,.fnav-top.is-on::after,.fnav-has.is-on>.fnav-top::after{transform:scaleX(1)}
+.fnav-chev{width:10px;height:10px;flex:none;transition:transform .25s var(--fn-ease)}
+.fnav-tbtn[aria-expanded="true"] .fnav-chev{transform:rotate(180deg)}
+
+/* Treatments drop-down: opens on click (and on hover with a mouse), closes with a short grace delay */
+.fnav-has{position:relative}
+.fnav-panel{position:absolute;top:calc(100% + 12px);left:50%;display:grid;grid-template-columns:1fr 1fr;gap:6px 30px;min-width:470px;padding:20px 22px 18px;
+  background:var(--fn-panel);border:1px solid var(--fn-line);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.45);
+  opacity:0;visibility:hidden;transform:translate(-50%,6px);
+  transition:opacity .18s var(--fn-ease) .12s,transform .18s var(--fn-ease) .12s,visibility 0s linear .3s}
+.fnav-panel::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}
+.fnav-tbtn[aria-expanded="true"]+.fnav-panel{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .2s var(--fn-ease),transform .2s var(--fn-ease),visibility 0s}
+@media (hover:hover) and (min-width:900px){
+  .fnav-has:hover>.fnav-panel{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .2s var(--fn-ease) .06s,transform .2s var(--fn-ease) .06s,visibility 0s}
+  .fnav-has:hover .fnav-chev{transform:rotate(180deg)}
+}
+.fnav-h{margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--fn-accent)}
+.fnav-panel a{display:block;margin:0 -10px;padding:8px 10px;border-radius:10px;font-size:15px;font-weight:500;color:var(--fn-text);transition:background .2s var(--fn-ease),color .2s var(--fn-ease)}
+.fnav-panel a:hover{background:rgba(246,241,220,.06)}
+.fnav-panel a[aria-current="page"]{color:var(--fn-accent)}
+
+/* actions: phone and the one call to action, top right */
+.fnav-act{display:flex;align-items:center;gap:16px;flex:none}
+.fnav-tel{font-size:13.5px;font-weight:500;color:var(--fn-muted);font-variant-numeric:tabular-nums;white-space:nowrap;transition:color .25s var(--fn-ease)}
+.fnav-tel:hover{color:var(--fn-text)}
+.fnav-cta{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 20px;border-radius:999px;background:var(--fn-accent)!important;color:var(--fn-on-accent)!important;font-size:14px;font-weight:700;white-space:nowrap;transition:transform .25s var(--fn-ease),box-shadow .25s var(--fn-ease)}
+.fnav-cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(255,237,0,.22)}
+.fnav-cta:active{transform:translateY(0) scale(.98)}
+.fnav-s{display:none}
+.fnav-burger{display:none;width:44px;height:44px;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.fnav-burger span{display:block;width:22px;height:2px;border-radius:2px;background:var(--fn-text);transition:transform .25s var(--fn-ease),opacity .2s var(--fn-ease)}
+.fnav-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.fnav-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
+.fnav-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.fnav-m{display:none}
+
+/* breadcrumbs: the visible twin of each page's BreadcrumbList */
+.fnav-crumbs{height:26px;display:flex;align-items:center;padding:0 var(--fn-edge);border-top:1px solid transparent;font-size:12px;color:var(--fn-dim);overflow:hidden;transition:opacity .25s var(--fn-ease),height .25s var(--fn-ease)}
+.fnav.is-scrolled .fnav-crumbs{opacity:0;height:0;pointer-events:none}   /* the clear bar keeps only logo, links and CTA once the page moves */
+.fnav-crumbs ol{display:flex;align-items:center;min-width:0;white-space:nowrap}
+.fnav-crumbs li{display:flex;align-items:center;min-width:0}
+.fnav-crumbs li+li::before{content:"\203A";margin:0 8px;color:var(--fn-dim)}
+.fnav-crumbs a{color:var(--fn-muted);transition:color .2s var(--fn-ease)}
+.fnav-crumbs a:hover{color:var(--fn-text)}
+.fnav-crumbs [aria-current="page"]{color:#e3ded0;overflow:hidden;text-overflow:ellipsis;display:block}
+
+@media (max-width:1180px){.fnav-tel{display:none}.fnav-top{padding:10px 10px}.fnav-top::after{left:10px;right:10px}}
+@media (max-width:1020px){.fnav-row{gap:12px}.fnav-l{display:none}.fnav-s{display:inline}}
+
+/* phones and small tablets: burger plus a full-height drawer under the bar */
+@media (max-width:899px){
+  /* no backdrop-filter here: it would make the fixed drawer below position against the bar instead of the viewport */
+  .fnav{--fn-row:56px;background:rgba(15,14,11,.97);-webkit-backdrop-filter:none;backdrop-filter:none}
+  html{scroll-padding-top:92px}
+  .fnav-logo svg{width:62px;height:35px}
+  .fnav-act{gap:6px;margin-left:auto}
+  .fnav-cta{min-height:38px;padding:0 14px;font-size:12.5px}
+  .fnav-burger{display:flex;margin-right:-8px}
+  .fnav-menu{position:fixed;left:0;right:0;top:var(--fn-row);bottom:0;display:block;padding:8px var(--fn-edge) calc(32px + env(safe-area-inset-bottom));
+    background:#0f0e0b;overflow-y:auto;-webkit-overflow-scrolling:touch;opacity:0;visibility:hidden;transform:translateY(-8px);
+    transition:opacity .25s var(--fn-ease),transform .25s var(--fn-ease),visibility 0s linear .25s}
+  .fnav.is-open .fnav-menu{opacity:1;visibility:visible;transform:none;transition:opacity .25s var(--fn-ease),transform .25s var(--fn-ease),visibility 0s}
+  .fnav-list{display:block}
+  .fnav-list>li{border-bottom:1px solid var(--fn-line)}
+  .fnav-top{display:flex;width:100%;padding:16px 0;font-size:21px;font-weight:700;color:var(--fn-text)}
+  .fnav-top::after{display:none}
+  .fnav-top[aria-current="page"],.fnav-top.is-on{color:var(--fn-accent)}
+  .fnav-tbtn{pointer-events:none}
+  .fnav-tbtn .fnav-chev{display:none}
+  .fnav-panel,.fnav-tbtn[aria-expanded="true"]+.fnav-panel{position:static;display:block;min-width:0;padding:0 0 14px;margin:0;background:none;border:0;border-radius:0;box-shadow:none;opacity:1;visibility:inherit;transform:none;transition:none}
+  .fnav-panel::before{display:none}
+  /* visibility:inherit above, never visible: a visible child stays tappable inside the closed, hidden drawer */
+  .fnav-col+.fnav-col{margin-top:12px}
+  .fnav-panel a{margin:0;padding:9px 0;font-size:17px;border-radius:0}
+  .fnav-panel a:hover{background:none;color:var(--fn-accent)}
+  .fnav-m{display:block}
+  .fnav-m a{display:block;padding:14px 0;font-size:16px;font-weight:500;color:var(--fn-muted)}
+  html.fnav-lock,html.fnav-lock body{overflow:hidden}
+}
+@media (max-width:380px){.fnav-cta{padding:0 11px;font-size:12px}}
+@media (prefers-reduced-motion:reduce){.fnav,.fnav *{transition:none!important}}

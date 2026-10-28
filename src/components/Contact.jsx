@@ -41,7 +41,7 @@ export default function Contact() {
               className="text-[10px] font-medium tracking-[0.2em] uppercase text-[#86868b] mb-3"
               style={mono}
             >
-              [04 / CONTACT]
+              [05 / CONTACT]
             </p>
           </AnimatedItem>
           <AnimatedItem>
