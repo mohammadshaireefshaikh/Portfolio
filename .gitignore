@@ -40,3 +40,7 @@ server/embeddings.json
 # VITE_* vars are public (inlined into client bundle).
 # Allow .env.production in git so GitHub Actions can build with the right API URL.
 !.env.production
+
+# tool state
+.omc/
+**/.omc/
