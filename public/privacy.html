@@ -40,7 +40,7 @@
   <p>The contact form does not send anything to this site. Pressing send opens your own email application with the message pre-filled; the message is only sent if you send it from there, and only to my email address (hosted by Google). I keep enquiry emails for up to 12 months after our last contact, to reply and follow up, then delete them. Lawful basis: your request / legitimate interest.</p>
 
   <h2>3. Flappy game and local storage</h2>
-  <p>The arcade game keeps your best score and chosen nickname in your own browser so they are there next time. This data never leaves your device unless you choose to email a score to me or copy a challenge link, which holds that run's seed and flaps but no name. You can clear it from your browser settings at any time.</p>
+  <p>The arcade game keeps your best score and chosen nickname in your own browser so they are there next time. This data never leaves your device unless you submit to the Hall of Fame (below) or copy a challenge link, which holds that run's seed and flaps but no name. You can clear it from your browser settings at any time.</p>
   <table>
     <thead><tr><th>Key</th><th>Purpose</th><th>Where</th><th>Duration</th></tr></thead>
     <tbody>
@@ -53,7 +53,11 @@
   </table>
   <p>All of these are strictly necessary for the feature you chose to use, so no cookie banner is shown.</p>
 
-  <h2>4. Hosting</h2>
+  <h2>4. Hall of Fame</h2>
+  <p>Submitting a score is optional. When you press Submit score, your nickname, score and that run's recorded flaps go to a serverless function I run on <strong>Vercel</strong>, which replays the run to check the score. An alert with your nickname and score then goes to my phone through <strong>ntfy.sh</strong>, so I can approve or reject it. Please use a nickname, not your real name or contact details.</p>
+  <p>Nothing is saved at this stage. If I reject it, I keep nothing, and ntfy.sh holds the alert only for a short time. If I approve it, your nickname, score and date are stored in <strong>Vercel Blob</strong> and shown publicly in the Hall until you ask me to remove them by email. These providers may process this data outside the UK. A rate limit uses your IP address in memory and does not retain it. Lawful basis: your consent, given by pressing Submit score, which you can withdraw by emailing me.</p>
+
+  <h2>5. Hosting</h2>
   <p>The site is served by <strong>Hostinger</strong> (virtualuniverso.co.uk) and <strong>GitHub Pages</strong>. Like any web host they log IP addresses and request details for security and reliability for a short period. Fonts are served from this site, so no request goes to a font provider.</p>
 
   <h2>Your rights</h2>

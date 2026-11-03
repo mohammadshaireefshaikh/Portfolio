@@ -1872,6 +1872,9 @@ function TouchPolicy({ inGame }) {
   return null;
 }
 
+// Same backend as the chat widget: Vite proxy locally, Vercel in production.
+const HALL_URL = (import.meta.env.VITE_API_URL || "/api/chat").replace(/\/chat$/, "/scores");
+
 // ─── Local leaderboard helpers ────────────────────────────────
 const LB_KEY = "flappy.scores";
 function readScores() {
@@ -1956,7 +1959,7 @@ export default function ConsoleScene() {
   });
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submission, setSubmission] = useState({ status: "idle" }); // idle | sending | sent | failed
   const flapRef = useRef(false);
   // What the next run should be, and how the last one went. Read by the screen hook.
   const runRef = useRef(null);
@@ -1988,7 +1991,7 @@ export default function ConsoleScene() {
   function onDeath(finalScore) {
     setLastRun(finalScore);
     setMode("dead");
-    setSubmitted(false);
+    setSubmission({ status: "idle" });
     setLinkCopied(false);
     deadAt.current = performance.now();
     const run = runRef.current;
@@ -2014,10 +2017,25 @@ export default function ConsoleScene() {
     }
   }
 
-  function submitScore() {
-    if (!playerName.trim()) return;
-    addScore(playerName, lastRun ?? 0);
-    setSubmitted(true);
+  async function submitScore() {
+    const name = playerName.trim();
+    const run = runRef.current.lastRun;
+    if (!name || !run || submission.status === "sending") return;
+    setSubmission({ status: "sending" });
+    const failed = (error) => setSubmission({ status: "failed", error: error ?? "Couldn't reach the Hall. Please try again." });
+    try {
+      const res = await fetch(HALL_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, seed: run.seed.toString(), flaps: run.flaps }),
+      });
+      if (res.ok) {
+        addScore(name, lastRun ?? 0);
+        setSubmission({ status: "sent" });
+      } else failed((await res.json().catch(() => ({}))).error);
+    } catch {
+      failed();
+    }
   }
   function replay() { setMode("playing"); }
   function revive() {
@@ -2391,7 +2409,7 @@ export default function ConsoleScene() {
                   )}
                 </div>
 
-                {!submitted ? (
+                {submission.status !== "sent" ? (
                   <>
                     <label htmlFor="flappy-submit-name" className="text-[10px] tracking-[0.2em] uppercase text-[#86868b] mb-1.5 block">
                       SUBMIT AS
@@ -2403,17 +2421,28 @@ export default function ConsoleScene() {
                       placeholder="your name"
                       value={playerName}
                       onChange={(e) => savePlayerName(e.target.value)}
-                      className="w-full bg-transparent border-b border-dashed border-white/[0.15] text-sm text-white placeholder-[#86868b] outline-none focus:border-[#2997ff] transition-colors px-0 py-1.5 mb-5"
+                      className="w-full bg-transparent border-b border-dashed border-white/[0.15] text-sm text-white placeholder-[#86868b] outline-none focus:border-[#2997ff] transition-colors px-0 py-1.5 mb-2"
                       style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
                     />
+                    <p className="text-[10px] leading-relaxed text-[#86868b] mb-4">
+                      {over.revived
+                        ? "Revived runs stay on this device and can't enter the Hall."
+                        : "Goes to Mohammad for review. If approved, this name shows publicly in the Hall, so use a nickname. "}
+                      {!over.revived && (
+                        <a href={`${import.meta.env.BASE_URL}privacy.html`} className="underline hover:text-white">Privacy</a>
+                      )}
+                    </p>
+                    {submission.status === "failed" && (
+                      <p role="alert" className="text-[11px] leading-relaxed text-[#ff8a8a] mb-3">{submission.error}</p>
+                    )}
                     <div className="flex flex-col gap-2.5">
                       <button
                         onClick={submitScore}
-                        disabled={!playerName.trim() || lastRun < 1}
+                        disabled={!playerName.trim() || lastRun < 1 || over.revived || submission.status === "sending"}
                         className="w-full px-4 py-2.5 text-xs tracking-[0.05em] text-white rounded-md disabled:opacity-30 transition-colors"
                         style={{ background: "#0071e3", fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
                       >
-                        [ SUBMIT SCORE ]
+                        {submission.status === "sending" ? "[ SENDING... ]" : "[ SUBMIT SCORE ]"}
                       </button>
                       <div className="grid grid-cols-2 gap-2.5">
                         <button
@@ -2443,19 +2472,10 @@ export default function ConsoleScene() {
                   </>
                 ) : (
                   <>
-                    <p className="text-sm text-[#2997ff] mb-2">
-                      → saved on this device
-                    </p>
-                    <a
-                      href={`mailto:shaikh.mohammad1099@gmail.com?subject=${encodeURIComponent(
-                        `Flappy Hall of Fame: ${playerName.trim()} scored ${lastRun}`
-                      )}&body=${encodeURIComponent(
-                        `Name: ${playerName.trim()}\nScore: ${lastRun}\n\nPlease add me to the Hall of Fame.`
-                      )}`}
-                      className="block text-[11px] text-[#9aa3b5] underline hover:text-white mb-5"
-                    >
-                      email it to Mohammad for the Hall of Fame →
-                    </a>
+                    <div role="status" className="mb-5">
+                      <p className="text-sm text-[#2997ff] mb-1">→ sent to Mohammad for review</p>
+                      <p className="text-[11px] leading-relaxed text-[#9aa3b5]">If approved, it appears in the Hall.</p>
+                    </div>
                     <div className="grid grid-cols-2 gap-2.5">
                       <button
                         onClick={replay}
@@ -2515,14 +2535,15 @@ export default function ConsoleScene() {
                   </p>
                   <button
                     onClick={() => setShowLeaderboard(false)}
-                    className="text-[#86868b] hover:text-white"
+                    aria-label="Close Hall of Fame"
+                    className="flex w-11 h-11 -mr-3 -my-3 items-center justify-center text-[#86868b] hover:text-white"
                   >
                     <X size={14} />
                   </button>
                 </div>
                 <LeaderboardList />
                 <p className="text-[10px] text-[#86868b] mt-4 leading-relaxed">
-                  Scores are saved locally for now. Mohammad reviews new entries and promotes the best to the public hall. (Backend wiring pending.)
+                  Mohammad reviews every name before it appears here.
                 </p>
               </div>
             </div>
@@ -2588,7 +2609,7 @@ const HELP_MODES = [
   ["Chase best", "Race the ghost of your best run on the same pipes."],
   ["Royale", `Fly the same pipes with ${ROYALE_BOTS} bots. Be the last bird flying.`],
   ["Copy challenge", "Copy a link so a friend can race your run."],
-  ["Submit score", "Save your name and score in the Hall on this device."],
+  ["Submit score", "Send your nickname and score for review. If approved, it shows in the public Hall."],
 ];
 function HowToPlay({ open, onClose }) {
   const ref = useRef(null);
@@ -2652,13 +2673,9 @@ function HowToPlay({ open, onClose }) {
   );
 }
 
-function LeaderboardList() {
-  const scores = readScores();
-  if (!scores.length) {
-    return <p className="text-sm text-[#86868b] italic py-6 text-center">No scores yet. Be first.</p>;
-  }
+function ScoreRows({ scores }) {
   return (
-    <ol className="flex flex-col gap-1.5 max-h-[50vh] overflow-y-auto">
+    <ol className="flex flex-col gap-1.5 max-h-[28vh] overflow-y-auto" tabIndex={0} aria-label="Scores">
       {scores.slice(0, 20).map((s, i) => (
         <li
           key={i}
@@ -2676,5 +2693,37 @@ function LeaderboardList() {
         </li>
       ))}
     </ol>
+  );
+}
+
+function LeaderboardList() {
+  const [hall, setHall] = useState(null); // null while loading, false if unreachable
+  const mine = readScores();
+
+  useEffect(() => {
+    let live = true;
+    fetch(HALL_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        return res.json();
+      })
+      .then(({ entries }) => { if (live) setHall(entries); })
+      .catch(() => { if (live) setHall(false); });
+    return () => { live = false; };
+  }, []);
+
+  return (
+    <>
+      {hall === null && <p className="text-sm text-[#86868b] py-6 text-center">Loading the Hall…</p>}
+      {hall === false && <p role="alert" className="text-sm text-[#ff8a8a] py-6 text-center">Couldn't load the Hall. Try again soon.</p>}
+      {hall && hall.length === 0 && <p className="text-sm text-[#86868b] italic py-6 text-center">No names yet. Be first.</p>}
+      {hall && hall.length > 0 && <ScoreRows scores={hall} />}
+      {mine.length > 0 && (
+        <>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-[#86868b] mt-5 mb-2">ON THIS DEVICE</p>
+          <ScoreRows scores={mine} />
+        </>
+      )}
+    </>
   );
 }
