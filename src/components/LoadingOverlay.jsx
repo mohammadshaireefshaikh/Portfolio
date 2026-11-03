@@ -73,7 +73,7 @@ export default function LoadingOverlay({ onEnter }) {
           }}
         >
           {/* Monogram / brand */}
-          <div className="text-[10px] tracking-[0.3em] uppercase text-[#60605c] mb-4">
+          <div className="text-[10px] tracking-[0.3em] uppercase text-[#86868b] mb-4">
             MOHAMMAD SHAIKH
           </div>
 
@@ -96,7 +96,7 @@ export default function LoadingOverlay({ onEnter }) {
                 transition={{ duration: 0.25, ease: "easeOut" }}
               />
             </div>
-            <div className="flex items-center justify-between mt-3 text-[10px] tracking-[0.2em] uppercase text-[#60605c]">
+            <div className="flex items-center justify-between mt-3 text-[10px] tracking-[0.2em] uppercase text-[#86868b]">
               <span>
                 {ready ? "READY" : "LOADING"}
               </span>
@@ -142,7 +142,7 @@ export default function LoadingOverlay({ onEnter }) {
           </AnimatePresence>
 
           {/* Idle hint */}
-          <p className="mt-6 text-[10px] tracking-[0.2em] uppercase text-[#444]">
+          <p className="mt-6 text-[10px] tracking-[0.2em] uppercase text-[#86868b]">
             {ready ? "Audio starts on click" : "Preparing scene & fonts"}
           </p>
         </motion.div>

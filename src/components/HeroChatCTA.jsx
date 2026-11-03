@@ -27,7 +27,6 @@ export default function HeroChatCTA({ compact = false }) {
         border: "1px solid rgba(0,113,227,0.35)",
         boxShadow: "0 0 24px rgba(0,113,227,0.15), inset 0 1px 0 rgba(255,255,255,0.08)",
       }}
-      aria-label="Open AI assistant"
     >
       {/* Pulsing sparkle badge — single expand+fade per cycle */}
       <span className="relative flex items-center justify-center w-8 h-8 rounded-xl shrink-0"

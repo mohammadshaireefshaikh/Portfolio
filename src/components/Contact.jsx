@@ -99,10 +99,11 @@ export default function Contact() {
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                 <div>
-                  <label className="text-[11px] tracking-wider text-[#86868b] mb-1 block">
+                  <label htmlFor="contact-name" className="text-[11px] tracking-wider text-[#86868b] mb-1 block">
                     <span style={promptStyle}>$ </span>name:
                   </label>
                   <input
+                    id="contact-name"
                     name="name"
                     type="text"
                     required
@@ -115,10 +116,11 @@ export default function Contact() {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] tracking-wider text-[#86868b] mb-1 block">
+                  <label htmlFor="contact-email" className="text-[11px] tracking-wider text-[#86868b] mb-1 block">
                     <span style={promptStyle}>$ </span>email:
                   </label>
                   <input
+                    id="contact-email"
                     name="email"
                     type="email"
                     required
@@ -131,10 +133,11 @@ export default function Contact() {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] tracking-wider text-[#86868b] mb-1 block">
+                  <label htmlFor="contact-message" className="text-[11px] tracking-wider text-[#86868b] mb-1 block">
                     <span style={promptStyle}>$ </span>message:
                   </label>
                   <textarea
+                    id="contact-message"
                     name="message"
                     required
                     rows={4}
@@ -149,7 +152,7 @@ export default function Contact() {
                 <div className="flex flex-col items-stretch gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-[11px] text-[#86868b]">
                     <span style={promptStyle}>$ </span>opens your mail app · nothing stored here ·{" "}
-                    <a href="/privacy.html" className="underline hover:text-white">privacy</a>
+                    <a href={`${import.meta.env.BASE_URL}privacy.html`} className="underline hover:text-white">privacy</a>
                   </p>
                   <motion.button
                     type="submit"

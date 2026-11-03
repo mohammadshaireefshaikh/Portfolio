@@ -28,7 +28,7 @@ export default function About() {
       <div className="max-w-5xl mx-auto">
         <AnimatedSection className="mb-16">
           <AnimatedItem>
-            <p className="text-xs font-medium tracking-[0.2em] uppercase text-[#0071e3] mb-4">
+            <p className="text-xs font-medium tracking-[0.2em] uppercase text-[#2997ff] mb-4">
               About
             </p>
           </AnimatedItem>
@@ -108,7 +108,7 @@ export default function About() {
                       <p className="text-sm font-semibold text-white">{award.title}</p>
                       <span className="text-[10px] text-[#86868b]">{award.year}</span>
                     </div>
-                    <p className="text-xs text-[#0071e3] mb-1.5">{award.subtitle}</p>
+                    <p className="text-xs text-[#2997ff] mb-1.5">{award.subtitle}</p>
                     <p className="text-xs text-[#86868b] leading-relaxed">{award.detail}</p>
                   </div>
                 </motion.div>

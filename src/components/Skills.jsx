@@ -39,7 +39,7 @@ export default function Skills() {
       <div className="max-w-5xl mx-auto">
         <AnimatedSection className="mb-16">
           <AnimatedItem>
-            <p className="text-xs font-medium tracking-[0.2em] uppercase text-[#0071e3] mb-4">
+            <p className="text-xs font-medium tracking-[0.2em] uppercase text-[#2997ff] mb-4">
               Skills
             </p>
           </AnimatedItem>

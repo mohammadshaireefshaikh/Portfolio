@@ -98,7 +98,6 @@ function ProjectCard({ project, index, onOpen }) {
         transformStyle: "preserve-3d",
         willChange: "transform",
       }}
-      aria-label={`Open details for ${project.title}`}
     >
       {project.image && (
         <div className="w-full h-36 overflow-hidden shrink-0">
@@ -183,7 +182,6 @@ function ProjectRow({ project, index, onOpen }) {
       viewport={VIEWPORT}
       className="group grid grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.5fr)_auto] items-center gap-4 md:gap-6 w-full text-left px-4 py-4 border-t border-white/[0.06] hover:bg-white/[0.025] transition-colors duration-150"
       style={mono}
-      aria-label={`Open details for ${project.title}`}
     >
       <span className="text-[11px] tracking-[0.15em] text-[#86868b] group-hover:text-[#2997ff] transition-colors duration-150">
         {pad2(index)}

@@ -13,10 +13,10 @@ export default function Footer() {
           </a>
         </p>
         <div className="flex items-center gap-5">
-          <a href={personal.github} target="_blank" rel="noopener noreferrer" className="text-xs text-[#86868b] hover:text-[#86868b] transition-colors">GitHub</a>
-          <a href={personal.linkedin} target="_blank" rel="noopener noreferrer" className="text-xs text-[#86868b] hover:text-[#86868b] transition-colors">LinkedIn</a>
-          <a href={`mailto:${personal.email}`} className="text-xs text-[#86868b] hover:text-[#86868b] transition-colors">Email</a>
-          <a href="/privacy.html" className="text-xs text-[#86868b] hover:text-[#86868b] transition-colors">Privacy</a>
+          <a href={personal.github} target="_blank" rel="noopener noreferrer" className="text-xs text-[#86868b] hover:text-white transition-colors">GitHub</a>
+          <a href={personal.linkedin} target="_blank" rel="noopener noreferrer" className="text-xs text-[#86868b] hover:text-white transition-colors">LinkedIn</a>
+          <a href={`mailto:${personal.email}`} className="text-xs text-[#86868b] hover:text-white transition-colors">Email</a>
+          <a href={`${import.meta.env.BASE_URL}privacy.html`} className="text-xs text-[#86868b] hover:text-white transition-colors">Privacy</a>
         </div>
       </div>
     </footer>

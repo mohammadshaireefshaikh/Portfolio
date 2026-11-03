@@ -160,7 +160,7 @@ export default function ProjectDetail({ project, onClose }) {
                 {/* Highlights list */}
                 {project.highlights && project.highlights.length > 0 && (
                   <div className="mb-10">
-                    <p className="text-xs font-medium text-[#0071e3] tracking-[0.15em] uppercase mb-4">
+                    <p className="text-xs font-medium text-[#2997ff] tracking-[0.15em] uppercase mb-4">
                       Highlights
                     </p>
                     <ul className="space-y-3">

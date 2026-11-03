@@ -39,7 +39,7 @@ function ExperienceCard({ role, company, period, location, description, highligh
           <div>
             <p className="text-base font-semibold text-white tracking-tight">{role}</p>
             <div className="flex flex-wrap items-center gap-2 mt-1">
-              <p className="text-sm font-medium text-[#0071e3]">{company}</p>
+              <p className="text-sm font-medium text-[#2997ff]">{company}</p>
               {location && (
                 <>
                   <span className="text-[#333]">·</span>
@@ -100,7 +100,7 @@ export default function Experience() {
       <div className="max-w-3xl mx-auto">
         <AnimatedSection className="mb-16">
           <AnimatedItem>
-            <p className="text-xs font-medium tracking-[0.2em] uppercase text-[#0071e3] mb-4">
+            <p className="text-xs font-medium tracking-[0.2em] uppercase text-[#2997ff] mb-4">
               Experience
             </p>
           </AnimatedItem>

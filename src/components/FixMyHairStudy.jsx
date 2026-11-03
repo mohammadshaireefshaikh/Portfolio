@@ -143,7 +143,7 @@ export default function FixMyHairStudy() {
                         {active.cta.label} <ArrowUpRight size={14} />
                       </GlassButton>
                     ) : (
-                      <span className="text-[11px] text-[#60605c] tracking-[0.1em] uppercase" style={mono}>
+                      <span className="text-[11px] text-[#86868b] tracking-[0.1em] uppercase" style={mono}>
                         Design study · not public
                       </span>
                     )}
@@ -171,7 +171,7 @@ export default function FixMyHairStudy() {
           </div>
         </div>
 
-        <p className="mt-4 text-[11px] text-[#60605c]" style={mono}>
+        <p className="mt-4 text-[11px] text-[#86868b]" style={mono}>
           Unreleased directions shown with the client's permission. Previews are design studies; forms in them send nothing.
         </p>
       </div>

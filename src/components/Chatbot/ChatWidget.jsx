@@ -13,7 +13,7 @@ const STARTER_PROMPTS = [
 const WELCOME_MESSAGE = {
   role: "assistant",
   content:
-    "Hi, I'm Mohammad's portfolio assistant. Ask me anything about his work — projects, stack, experience, or how to reach him. Messages are processed by an AI provider and not stored — please don't share personal details.",
+    "Hi, I'm Mohammad's portfolio assistant. Ask me anything about his work — projects, stack, experience, or how to reach him. Messages are processed by an AI provider and not stored by me — please don't share personal details.",
 };
 
 // Local dev: leave VITE_API_URL blank → Vite proxy → http://localhost:3001
@@ -68,14 +68,12 @@ export default function ChatWidget() {
     };
   }, []);
 
-  // Show first-visit tooltip once, then hide on any interaction
+  // Show the tooltip once per page load, then hide on any interaction
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (localStorage.getItem("chat-tooltip-seen")) return;
     const show = setTimeout(() => setShowTooltip(true), 2500);
     const hide = setTimeout(() => {
       setShowTooltip(false);
-      localStorage.setItem("chat-tooltip-seen", "1");
     }, 8500);
     return () => {
       clearTimeout(show);
@@ -236,7 +234,7 @@ export default function ChatWidget() {
                   <p className="text-sm font-semibold text-white leading-tight">
                     Ask about Mohammad
                   </p>
-                  <p className="text-[11px] text-[#444] mt-0.5">Portfolio assistant</p>
+                  <p className="text-[11px] text-[#86868b] mt-0.5">Portfolio assistant</p>
                 </div>
               </div>
               <button
@@ -328,6 +326,10 @@ export default function ChatWidget() {
                   />
                 </button>
               </div>
+              <p className="mt-2 px-1 text-[10px] leading-snug text-[#86868b]">
+                Answered by AI through Vercel and OpenRouter. Not saved here, but please don't share personal details.{" "}
+                <a href={`${import.meta.env.BASE_URL}privacy.html`} className="underline hover:text-white">Privacy</a>
+              </p>
             </form>
           </motion.div>
         )}
@@ -411,7 +413,6 @@ export default function ChatWidget() {
           onClick={() => {
             setOpen((o) => !o);
             setShowTooltip(false);
-            localStorage.setItem("chat-tooltip-seen", "1");
           }}
           whileHover={{ scale: 1.06 }}
           whileTap={{ scale: 0.92 }}

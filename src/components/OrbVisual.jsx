@@ -45,7 +45,7 @@ export default function OrbVisual() {
             {m.value}
           </p>
           <p className="text-sm font-medium text-[#f5f5f7]">{m.label}</p>
-          <p className="text-xs text-[#444] mt-0.5">{m.context}</p>
+          <p className="text-xs text-[#86868b] mt-0.5">{m.context}</p>
         </motion.div>
       ))}
     </div>

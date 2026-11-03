@@ -5,6 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float, ContactShadows, RoundedBox, OrbitControls, useGLTF, Html } from "@react-three/drei";
 import { X, Volume2, VolumeX, Play, Trophy, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
+import { FlappySim, STEP, MAX_FRAME, VIEW_H, GROUND_Y, PIPE_HALF_W, GAP_HALF, medalFor } from "./flappySim";
 
 // Camera targets (play distance computed in CameraRig)
 // IDLE is a far, long-lens 3/4 "isometric" view — ported from the FixMyHair
@@ -381,8 +382,8 @@ function drawBat(ctx, cx, cy, frame, cell = 3) {
   const rows = BAT_FRAMES[frame];
   const w = rows[0].length;
   const h = rows.length;
-  const ox = cx - (w * cell) / 2;
-  const oy = cy - (h * cell) / 2;
+  const ox = Math.round(cx - (w * cell) / 2);
+  const oy = Math.round(cy - (h * cell) / 2);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       if (rows[y][x] === "X") ctx.fillRect(ox + x * cell, oy + y * cell, cell, cell);
@@ -394,7 +395,7 @@ function drawBat(ctx, cx, cy, frame, cell = 3) {
   ctx.restore();
 }
 
-// ─── Flappy state ─────────────────────────────────────────────
+// ─── Flappy screen ────────────────────────────────────────────
 function useFlappyTexture(mode, flapRef, onScore, onDeath) {
   const texture = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -409,32 +410,29 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     return t;
   }, []);
 
-  const stateRef = useRef({
-    canvas: texture.image,
-    bird: { x: 70, y: 146, vy: 0, r: 10 },
-    pipes: [],
-    particles: [],
-    spawn: 0,
-    frameTimer: 0,
-    frame: 0,
-    score: 0,
-    waitingForFlap: true,
-  });
+  const stateRef = useRef(null);
+  if (stateRef.current === null) {
+    stateRef.current = {
+      canvas: texture.image,
+      sim: new FlappySim(),
+      accumulator: 0,
+      particles: [],
+      frameTimer: 0,
+      frame: 0,
+    };
+  }
 
   function reset() {
     const s = stateRef.current;
-    s.bird.x = 70;
-    s.bird.y = s.canvas.height / 2;
-    s.bird.vy = 0;
-    s.pipes = [];
-    s.spawn = 0;
+    s.sim = new FlappySim();
+    s.accumulator = 0;
     s.particles = [];
-    s.score = 0;
-    s.waitingForFlap = mode === "playing";
+    if (mode === "idle") s.sim.flap(); // attract mode is already flying
     onScore?.(0);
   }
 
-  useEffect(() => { reset(); /* eslint-disable-next-line */ }, [mode]);
+  // "dead" keeps the run on screen: the bat falls behind the game-over panel.
+  useEffect(() => { if (mode !== "dead") reset(); /* eslint-disable-next-line */ }, [mode]);
 
   function burst(x, y) {
     const s = stateRef.current;
@@ -463,87 +461,41 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     const s = stateRef.current;
     const W = s.canvas.width;
     const H = s.canvas.height;
-    const GAP = 72;
-    const PIPE_W = 32;
-    const SPEED = mode === "playing" ? 95 : 70;
-    const G = mode === "playing" ? 540 : 420;
-    const FLAP = -195;
+    const scale = H / VIEW_H;
+    const toY = (y) => H / 2 - y * scale;
+    const birdX = 70;
 
-    s.frameTimer += dt * (Math.abs(s.bird.vy) > 50 ? 14 : 7);
+    s.frameTimer += dt * (s.sim.vy > 0 ? 14 : 7);
     if (s.frameTimer > 1) { s.frameTimer = 0; s.frame = 1 - s.frame; }
 
-    // In 'dead' mode: don't tick physics, just update particles + draw frozen frame
-    const frozen = mode === "dead";
+    if (mode === "playing" && flapRef.current) {
+      flapRef.current = false;
+      if (s.sim.state !== "over") {
+        s.sim.flap();
+        sfx.flap();
+      }
+    }
 
-    if (!frozen) {
-      if (mode === "playing") {
-        if (flapRef.current) {
-          s.bird.vy = FLAP;
-          s.waitingForFlap = false;
-          flapRef.current = false;
-          sfx.flap();
-        }
-        if (s.waitingForFlap) {
-          s.bird.y = H / 2 + Math.sin(performance.now() * 0.004) * 6;
+    s.accumulator += Math.min(dt, MAX_FRAME);
+    while (s.accumulator >= STEP) {
+      s.accumulator -= STEP;
+      const wasPlaying = s.sim.state === "play";
+      const scoreBefore = s.sim.score;
+      if (mode === "idle" && s.sim.wantsFlap()) s.sim.flap();
+      s.sim.step();
+      if (mode === "playing" && s.sim.score > scoreBefore) {
+        sfx.score();
+        sparkle(birdX + 20, toY(s.sim.view(1).y));
+        onScore?.(s.sim.score);
+      }
+      if (wasPlaying && s.sim.state === "over") {
+        burst(birdX, toY(s.sim.view(1).y));
+        if (mode === "playing") {
+          sfx.boom();
+          shake.amp = 0.16;
+          onDeath?.(s.sim.score);
         } else {
-          s.bird.vy += G * dt;
-          s.bird.y += s.bird.vy * dt;
-        }
-      } else if (mode === "idle") {
-        const next = s.pipes.find((p) => p.x + PIPE_W > s.bird.x);
-        const target = next ? next.gapY + GAP / 2 - 6 : H / 2;
-        if (s.bird.y > target && s.bird.vy > FLAP * 0.4) s.bird.vy = FLAP;
-        s.bird.vy += G * dt;
-        s.bird.y += s.bird.vy * dt;
-      }
-
-      if (!(mode === "playing" && s.waitingForFlap)) {
-        s.spawn += dt;
-        if (s.spawn > 1.3) {
-          s.spawn = 0;
-          const margin = 25;
-          const gapY = margin + Math.random() * (H - 2 * margin - GAP);
-          s.pipes.push({ x: W + 10, gapY, scored: false });
-        }
-        for (const p of s.pipes) p.x -= SPEED * dt;
-        s.pipes = s.pipes.filter((p) => p.x + PIPE_W > -10);
-      }
-
-      if (!(mode === "playing" && s.waitingForFlap)) {
-        for (const p of s.pipes) {
-          const inX = s.bird.x + s.bird.r > p.x && s.bird.x - s.bird.r < p.x + PIPE_W;
-          if (inX) {
-            if (s.bird.y - s.bird.r < p.gapY || s.bird.y + s.bird.r > p.gapY + GAP) {
-              burst(s.bird.x, s.bird.y);
-              if (mode === "playing") {
-                sfx.boom();
-                shake.amp = 0.16;
-                onDeath?.(s.score);
-              } else {
-                reset();
-              }
-              return;
-            }
-          }
-          if (!p.scored && p.x + PIPE_W < s.bird.x - s.bird.r) {
-            p.scored = true;
-            s.score++;
-            if (mode === "playing") {
-              sfx.score();
-              sparkle(s.bird.x + 20, s.bird.y);
-              onScore?.(s.score);
-            }
-          }
-        }
-        if (s.bird.y < 0 || s.bird.y > H) {
-          burst(s.bird.x, s.bird.y);
-          if (mode === "playing") {
-            sfx.boom();
-            shake.amp = 0.16;
-            onDeath?.(s.score);
-          } else {
-            reset();
-          }
+          reset();
         }
       }
     }
@@ -558,6 +510,9 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     s.particles = s.particles.filter((p) => p.life > 0);
 
     // Draw
+    const view = s.sim.view(s.accumulator / STEP);
+    const groundY = toY(GROUND_Y);
+    const pipeW = PIPE_HALF_W * 2 * scale;
     const g2d = s.canvas.getContext("2d");
     g2d.imageSmoothingEnabled = false;
     const g = g2d.createLinearGradient(0, 0, 0, H);
@@ -566,20 +521,29 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     g2d.fillStyle = g;
     g2d.fillRect(0, 0, W, H);
 
-    g2d.fillStyle = "#0071e3";
-    for (const p of s.pipes) {
-      g2d.fillRect(p.x, 0, PIPE_W, p.gapY);
-      g2d.fillRect(p.x, p.gapY + GAP, PIPE_W, H - p.gapY - GAP);
-      g2d.fillStyle = "#2997ff";
-      g2d.fillRect(p.x - 2, p.gapY - 8, PIPE_W + 4, 8);
-      g2d.fillRect(p.x - 2, p.gapY + GAP, PIPE_W + 4, 8);
+    for (const p of view.pipes) {
+      const x = birdX + (p.x - PIPE_HALF_W) * scale;
+      const top = toY(p.gapY + GAP_HALF);
+      const bottom = toY(p.gapY - GAP_HALF);
       g2d.fillStyle = "#0071e3";
+      g2d.fillRect(x, 0, pipeW, top);
+      g2d.fillRect(x, bottom, pipeW, groundY - bottom);
+      g2d.fillStyle = "#2997ff";
+      g2d.fillRect(x - 2, top - 8, pipeW + 4, 8);
+      g2d.fillRect(x - 2, bottom, pipeW + 4, 8);
     }
 
-    if (!frozen || s.particles.length > 0) {
-      g2d.fillStyle = frozen ? "#777780" : "#f0ca75";
-      drawBat(g2d, s.bird.x, s.bird.y, s.frame, 3);
+    g2d.fillStyle = "#0a0a0a";
+    g2d.fillRect(0, groundY, W, H - groundY);
+    g2d.fillStyle = "rgba(255,255,255,0.08)";
+    g2d.fillRect(0, groundY, W, 1);
+    g2d.fillStyle = "rgba(0,113,227,0.25)";
+    for (let x = -((view.scroll * scale) % 24); x < W; x += 24) {
+      g2d.fillRect(x, groundY + 8, 12, 4);
     }
+
+    g2d.fillStyle = s.sim.state === "over" ? "#777780" : "#f0ca75";
+    drawBat(g2d, birdX, toY(view.y), s.sim.state === "over" ? 0 : s.frame, 3);
 
     for (const p of s.particles) {
       g2d.globalAlpha = Math.max(0, p.life / p.max);
@@ -588,16 +552,16 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     }
     g2d.globalAlpha = 1;
 
-    if (mode === "playing" && s.waitingForFlap) {
+    if (s.sim.state === "ready") {
       g2d.fillStyle = "rgba(255,255,255,0.75)";
       g2d.font = "bold 16px system-ui, sans-serif";
       g2d.textAlign = "center";
       g2d.fillText("TAP OR SPACE", W / 2, H / 2 - 32);
-    } else if (!frozen) {
+    } else if (s.sim.state === "play") {
       g2d.fillStyle = "rgba(255,255,255,0.22)";
       g2d.font = "bold 56px system-ui, sans-serif";
       g2d.textAlign = "center";
-      g2d.fillText(String(s.score), W / 2, H / 2 + 20);
+      g2d.fillText(String(s.sim.score), W / 2, H / 2 + 20);
     }
 
     texture.needsUpdate = true;
@@ -840,7 +804,6 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath, showS
             style={{ touchAction: "manipulation" }}
             onPointerUp={startGame}
             onClick={startGame}
-            aria-label="Play Flappy on the arcade cabinet"
           >
             <span className="arcade-play-sign__led" aria-hidden="true" />
             <span>CLICK TO PLAY GAME</span>
@@ -2059,17 +2022,18 @@ export default function ConsoleScene() {
             className="fixed top-5 left-4 sm:left-5 z-10 text-white max-w-[140px] sm:max-w-[260px]"
             style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
           >
-            <div className="text-[10px] tracking-[0.2em] uppercase text-[#60605c]">SCORE</div>
+            <div className="text-[10px] tracking-[0.2em] uppercase text-[#86868b]">SCORE</div>
             <div className="text-4xl font-bold tabular-nums tracking-tight">{score}</div>
-            <div className="text-[10px] tracking-[0.2em] uppercase text-[#60605c] mt-2">
+            <div className="text-[10px] tracking-[0.2em] uppercase text-[#86868b] mt-2">
               BEST — {best}
             </div>
 
             <div className="fixed bottom-14 left-4 w-36 sm:static sm:mt-5 sm:w-auto">
-              <div className="text-[10px] tracking-[0.2em] uppercase text-[#60605c] mb-1.5">
+              <label htmlFor="flappy-player" className="text-[10px] tracking-[0.2em] uppercase text-[#86868b] mb-1.5 block">
                 PLAYER
-              </div>
+              </label>
               <input
+                id="flappy-player"
                 type="text"
                 maxLength={24}
                 placeholder="your name"
@@ -2121,6 +2085,9 @@ export default function ConsoleScene() {
           {/* GAME OVER PANEL */}
           {mode === "dead" && (
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="flappy-over-title"
               className="fixed inset-0 z-20 flex items-center justify-center p-6"
               style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
             >
@@ -2133,32 +2100,39 @@ export default function ConsoleScene() {
                   boxShadow: "6px 6px 0 0 rgba(0,113,227,0.5)",
                 }}
               >
-                <p className="text-[10px] tracking-[0.2em] uppercase text-[#ff2e2e] mb-1">
+                <p id="flappy-over-title" className="text-[10px] tracking-[0.2em] uppercase text-[#ff2e2e] mb-1">
                   GAME OVER
                 </p>
                 <div className="flex items-end gap-6 mb-6">
                   <div>
-                    <div className="text-[10px] tracking-[0.2em] uppercase text-[#60605c]">SCORE</div>
+                    <div className="text-[10px] tracking-[0.2em] uppercase text-[#86868b]">SCORE</div>
                     <div className="text-4xl font-bold tabular-nums text-white">{lastRun}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] tracking-[0.2em] uppercase text-[#60605c]">BEST</div>
+                    <div className="text-[10px] tracking-[0.2em] uppercase text-[#86868b]">BEST</div>
                     <div className="text-2xl font-bold tabular-nums text-[#2997ff]">{best}</div>
                   </div>
+                  {medalFor(lastRun ?? 0) && (
+                    <div>
+                      <div className="text-[10px] tracking-[0.2em] uppercase text-[#86868b]">MEDAL</div>
+                      <div className="text-base font-bold mb-1 text-[#f5c518]">{medalFor(lastRun ?? 0)}</div>
+                    </div>
+                  )}
                 </div>
 
                 {!submitted ? (
                   <>
-                    <label className="text-[10px] tracking-[0.2em] uppercase text-[#60605c] mb-1.5 block">
+                    <label htmlFor="flappy-submit-name" className="text-[10px] tracking-[0.2em] uppercase text-[#86868b] mb-1.5 block">
                       SUBMIT AS
                     </label>
                     <input
+                      id="flappy-submit-name"
                       type="text"
                       maxLength={24}
                       placeholder="your name"
                       value={playerName}
                       onChange={(e) => savePlayerName(e.target.value)}
-                      className="w-full bg-transparent border-b border-dashed border-white/[0.15] text-sm text-white placeholder-[#444] outline-none focus:border-[#2997ff] transition-colors px-0 py-1.5 mb-5"
+                      className="w-full bg-transparent border-b border-dashed border-white/[0.15] text-sm text-white placeholder-[#86868b] outline-none focus:border-[#2997ff] transition-colors px-0 py-1.5 mb-5"
                       style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
                     />
                     <div className="flex flex-col gap-2.5">
@@ -2233,7 +2207,7 @@ export default function ConsoleScene() {
                     </div>
                   </>
                 )}
-                <p className="text-[10px] text-[#444] text-center mt-5 tracking-[0.1em]">
+                <p className="text-[10px] text-[#86868b] text-center mt-5 tracking-[0.1em]">
                   SPACE REPLAY · ESC EXIT
                 </p>
               </div>
@@ -2268,7 +2242,7 @@ export default function ConsoleScene() {
                   </button>
                 </div>
                 <LeaderboardList />
-                <p className="text-[10px] text-[#444] mt-4 leading-relaxed">
+                <p className="text-[10px] text-[#86868b] mt-4 leading-relaxed">
                   Scores are saved locally for now. Mohammad reviews new entries and promotes the best to the public hall. (Backend wiring pending.)
                 </p>
               </div>
@@ -2328,7 +2302,7 @@ function HoverLabel() {
 function LeaderboardList() {
   const scores = readScores();
   if (!scores.length) {
-    return <p className="text-sm text-[#60605c] italic py-6 text-center">No scores yet. Be first.</p>;
+    return <p className="text-sm text-[#86868b] italic py-6 text-center">No scores yet. Be first.</p>;
   }
   return (
     <ol className="flex flex-col gap-1.5 max-h-[50vh] overflow-y-auto">
@@ -2341,7 +2315,7 @@ function LeaderboardList() {
             border: `1px solid ${i === 0 ? "rgba(245,197,24,0.2)" : "rgba(255,255,255,0.05)"}`,
           }}
         >
-          <span className="text-[11px] text-[#60605c] tracking-[0.1em]">
+          <span className="text-[11px] text-[#86868b] tracking-[0.1em]">
             {String(i + 1).padStart(2, "0")}
           </span>
           <span className="text-white truncate">{s.name}</span>

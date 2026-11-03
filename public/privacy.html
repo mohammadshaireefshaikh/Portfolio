@@ -23,9 +23,9 @@
 </head>
 <body>
 <main>
-  <a class="back" href="/">← Back to portfolio</a>
+  <a class="back" href="./">← Back to portfolio</a>
   <h1>Privacy notice</h1>
-  <p class="meta">Last updated 20 October 2026</p>
+  <p class="meta">Last updated 3 November 2026</p>
 
   <h2>Who I am</h2>
   <p>This is the personal portfolio website of Mohammad Shaikh, an individual developer based in Liverpool, United Kingdom. I am the data controller for this site. Contact: <a href="mailto:shaikh.mohammad1099@gmail.com">shaikh.mohammad1099@gmail.com</a>.</p>
@@ -34,7 +34,7 @@
   <p>This site has no user accounts, no analytics, no advertising and sets no cookies. The only data handled is listed below.</p>
 
   <h2>1. Chat assistant</h2>
-  <p>The "Ask anything about my work" assistant sends the text you type to a serverless function I run on <strong>Vercel</strong>, which forwards it to an AI model provider (<strong>OpenRouter</strong>) to generate an answer about my portfolio. Messages are processed to answer your question and are not saved by me. Please do not enter personal, financial or sensitive information in the chat. Lawful basis: legitimate interest (answering questions about my work). Vercel and OpenRouter are based in the United States; transfers rely on their standard contractual clauses. A basic per-IP rate limit is applied in memory to prevent abuse and is not retained.</p>
+  <p>The "Ask anything about my work" assistant sends the text you type to a serverless function I run on <strong>Vercel</strong>, which forwards it to <strong>OpenRouter</strong>, and OpenRouter passes it to the company behind the AI model in use (by default <strong>OpenAI</strong>) to generate an answer about my portfolio. Messages are processed to answer your question and are not saved by me; those providers apply their own retention terms. Please do not enter personal, financial or sensitive information in the chat. Lawful basis: legitimate interest (answering questions about my work). Vercel, OpenRouter and OpenAI are based in the United States; transfers rely on their standard contractual clauses. A basic per-IP rate limit is applied in memory to prevent abuse and is not retained.</p>
 
   <h2>2. Contact form</h2>
   <p>The contact form does not send anything to this site. Pressing send opens your own email application with the message pre-filled; the message is only sent if you send it from there, and only to my email address (hosted by Google). I keep enquiry emails for as long as needed to reply and follow up. Lawful basis: your request / legitimate interest.</p>
@@ -47,13 +47,12 @@
       <tr><td><code>flappy.best</code></td><td>Your best score</td><td>Your browser (localStorage)</td><td>Until you clear it</td></tr>
       <tr><td><code>flappy.name</code></td><td>Nickname you typed</td><td>Your browser (localStorage)</td><td>Until you clear it</td></tr>
       <tr><td><code>flappy.scores</code></td><td>Your own score history</td><td>Your browser (localStorage)</td><td>Until you clear it</td></tr>
-      <tr><td><code>chat-tooltip-seen</code></td><td>Stops the chat hint showing again</td><td>Your browser (localStorage)</td><td>Until you clear it</td></tr>
     </tbody>
   </table>
   <p>All of these are strictly necessary for the feature you chose to use, so no cookie banner is shown.</p>
 
-  <h2>4. Hosting and fonts</h2>
-  <p>The site is served by <strong>Hostinger</strong> (virtualuniverso.co.uk) and <strong>GitHub Pages</strong>. Like any web host they log IP addresses and request details for security and reliability for a short period. Fonts are loaded from <strong>Google Fonts</strong>, which means your browser requests the font files from Google and Google sees your IP address; no cookies are set by that request.</p>
+  <h2>4. Hosting</h2>
+  <p>The site is served by <strong>Hostinger</strong> (virtualuniverso.co.uk) and <strong>GitHub Pages</strong>. Like any web host they log IP addresses and request details for security and reliability for a short period. Fonts are served from this site, so no request goes to a font provider.</p>
 
   <h2>Your rights</h2>
   <p>Under UK GDPR you can ask me what personal data I hold about you, ask for it to be corrected or deleted, object to processing, or withdraw consent where that applies. Email me at the address above. You also have the right to complain to the Information Commissioner's Office at <a href="https://ico.org.uk" rel="noopener noreferrer">ico.org.uk</a>.</p>
@@ -64,6 +63,8 @@
   <h2>Credits</h2>
   <p>The arcade cabinet in the 3D room is based on <a href="https://sketchfab.com/3d-models/electrocoin-goliath-mk3-f97fc21404684e3ab1eb7665e20c5d3e" rel="noopener noreferrer">"Electrocoin Goliath MK3"</a> by <a href="https://sketchfab.com/delinx" rel="noopener noreferrer">Delinx</a>, licensed under <a href="http://creativecommons.org/licenses/by/4.0/" rel="noopener noreferrer">CC-BY-4.0</a>; textures were downsized and the screen replaced with the live game.</p>
   <p>The One Piece wall art shown in the 3D room is fan art used for personal, non-commercial decoration. One Piece is © Eiichiro Oda / Shueisha. If you are the artist and would like credit or removal, email me.</p>
+
+  <p>Fonts (Space Grotesk, JetBrains Mono, and Bricolage Grotesque, DM Sans and IBM Plex Mono in the design preview) are used under the SIL Open Font License.</p>
 
   <h2>Changes</h2>
   <p>I will update this page if the site starts collecting anything new.</p>

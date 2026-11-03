@@ -100,15 +100,14 @@ export default function Hero() {
               style={{ color: "#9aa3b5" }}
             >
               {personal.title}
-              <span style={{ color: "#4a4f5a" }}> · </span>
+              <span style={{ color: "#86868b" }}> · </span>
               {personal.subtitle}
             </motion.p>
             <motion.a
               variants={itemVariants}
-              href="/flappy.html"
-              className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-xs text-[#60605c] hover:text-[#2997ff] transition-colors duration-200"
+              href={`${import.meta.env.BASE_URL}flappy.html`}
+              className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-xs text-[#86868b] hover:text-[#2997ff] transition-colors duration-200"
               style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
-              aria-label="Play Flappy — the game running on the console"
             >
               <span>▸</span>
               <span>THE CABINET RUNS FLAPPY — CLICK IT</span>

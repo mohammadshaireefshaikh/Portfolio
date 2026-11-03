@@ -2,13 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Flappy · Mohammad Shaikh</title>
   <meta name="description" content="A tiny arcade break. Flap to survive." />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/fonts/fonts.css" />
   <style>
     :root {
       --bg: #000;
@@ -56,6 +54,7 @@
       transition: color 200ms ease-out;
     }
     .top-bar a:hover { color: var(--fg); }
+    .top-links { display: flex; gap: 16px; }
     .brand {
       font-weight: 700;
       color: var(--fg);
@@ -66,9 +65,8 @@
     .brand span { color: var(--accent); }
     .stage {
       position: relative;
-      width: min(100%, 420px);
+      height: min(100dvh - 48px, (100vw - 24px) * 16 / 9, 746px);
       aspect-ratio: 9 / 16;
-      max-height: calc(100dvh - 48px);
       border-radius: 24px;
       overflow: hidden;
       border: 1px solid var(--line);
@@ -172,7 +170,7 @@
       box-shadow: 0 4px 20px var(--accent-glow);
       transition: transform 150ms ease-out, background-color 150ms ease-out;
     }
-    button.play:hover { background: #0077ed; }
+    button.play:hover { background: #0066cc; }
     button.play:active { transform: scale(0.97); }
     .hint {
       font-size: 11px;
@@ -191,8 +189,8 @@
 </head>
 <body>
   <div class="top-bar">
-    <a class="brand" href="/">Mohammad<span>.</span></a>
-    <a href="/">← Back</a>
+    <a class="brand" href="./">Mohammad<span>.</span></a>
+    <span class="top-links"><a href="privacy.html">Privacy</a> <a href="./">← Back</a></span>
   </div>
 
   <div class="stage" id="stage">
@@ -223,14 +221,19 @@
           <div class="label">Best</div>
           <div class="value" id="finalBest">0</div>
         </div>
+        <div id="medalBox" hidden>
+          <div class="label">Medal</div>
+          <div class="value" id="finalMedal"></div>
+        </div>
       </div>
       <button class="play" id="restartBtn">Play again</button>
       <p class="hint">Space / Click / Tap</p>
     </div>
   </div>
 
-  <script>
-  (() => {
+  <script type="module">
+    import { FlappySim, STEP, MAX_FRAME, VIEW_H, GROUND_Y, BIRD_R, PIPE_HALF_W, GAP_HALF, medalFor } from './src/components/flappySim.js';
+
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('score');
@@ -241,9 +244,12 @@
     const restartBtn = document.getElementById('restartBtn');
     const finalScoreEl = document.getElementById('finalScore');
     const finalBestEl = document.getElementById('finalBest');
+    const medalBoxEl = document.getElementById('medalBox');
+    const finalMedalEl = document.getElementById('finalMedal');
 
-    const BASE_W = 360, BASE_H = 640;
-    const GROUND_H = 60;
+    let cssW = 360, cssH = 640, scale = cssH / VIEW_H;
+    const toY = (y) => cssH / 2 - y * scale;
+    const birdX = () => cssW * 0.28;
 
     // Match canvas pixel size to CSS size (handles high-DPI)
     function fitCanvas() {
@@ -252,209 +258,142 @@
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      state.cssW = rect.width;
-      state.cssH = rect.height;
-      // Scale factor so game constants (designed in BASE_H) stay feel-correct
-      state.scale = rect.height / BASE_H;
+      cssW = rect.width;
+      cssH = rect.height;
+      scale = cssH / VIEW_H;
     }
 
     let best = 0;
     try { best = parseInt(localStorage.getItem('flappy.best') || '0', 10) || 0; } catch {}
     bestLabelEl.textContent = `BEST — ${best}`;
 
-    const state = {
-      mode: 'ready',        // 'ready' | 'playing' | 'dead'
-      cssW: BASE_W,
-      cssH: BASE_H,
-      scale: 1,
-      bird: { x: 90, y: 240, vy: 0, r: 12, rot: 0 },
-      pipes: [],
-      spawnTimer: 0,
-      score: 0,
-      t: 0,
-    };
-
-    const CFG = {
-      gravity: 1600,          // px/s^2
-      flap: -430,             // px/s
-      pipeSpeed: 165,         // px/s
-      pipeGap: 150,
-      pipeInterval: 1.5,      // seconds
-      pipeWidth: 56,
-    };
+    let sim = new FlappySim();
+    let accumulator = 0;
 
     function reset() {
-      state.mode = 'ready';
-      state.bird.x = state.cssW * 0.28;
-      state.bird.y = state.cssH / 2;
-      state.bird.vy = 0;
-      state.bird.rot = 0;
-      state.pipes = [];
-      state.spawnTimer = 0;
-      state.score = 0;
+      sim = new FlappySim();
+      accumulator = 0;
       scoreEl.textContent = '0';
       startOverlay.hidden = false;
       gameOverOverlay.hidden = true;
     }
 
     function start() {
-      state.mode = 'playing';
-      state.bird.vy = CFG.flap;
+      sim.flap();
       startOverlay.hidden = true;
       gameOverOverlay.hidden = true;
     }
 
+    // Keyboard, click and tap all land here; 'over' needs the Play again button.
     function flap() {
-      if (state.mode === 'ready') { start(); return; }
-      if (state.mode === 'playing') { state.bird.vy = CFG.flap; }
-      // 'dead' needs explicit restart button
+      if (sim.state === 'ready') start();
+      else sim.flap();
     }
 
     function die() {
-      state.mode = 'dead';
-      if (state.score > best) {
-        best = state.score;
+      if (sim.score > best) {
+        best = sim.score;
         try { localStorage.setItem('flappy.best', String(best)); } catch {}
       }
       bestLabelEl.textContent = `BEST — ${best}`;
-      finalScoreEl.textContent = state.score;
+      finalScoreEl.textContent = sim.score;
       finalBestEl.textContent = best;
+      const medal = medalFor(sim.score);
+      medalBoxEl.hidden = !medal;
+      finalMedalEl.textContent = medal ?? '';
       gameOverOverlay.hidden = false;
     }
 
-    function spawnPipe() {
-      const margin = 70;
-      const minY = margin;
-      const maxY = state.cssH - GROUND_H - margin - CFG.pipeGap;
-      const gapY = Math.random() * (maxY - minY) + minY;
-      state.pipes.push({ x: state.cssW + 20, gapY, scored: false });
-    }
-
     function update(dt) {
-      if (state.mode !== 'playing') return;
-
-      // Bird physics
-      state.bird.vy += CFG.gravity * dt;
-      state.bird.y += state.bird.vy * dt;
-      state.bird.rot = Math.max(-0.5, Math.min(1.2, state.bird.vy / 500));
-
-      // Floor / ceiling
-      if (state.bird.y + state.bird.r >= state.cssH - GROUND_H) {
-        state.bird.y = state.cssH - GROUND_H - state.bird.r;
-        die();
-        return;
-      }
-      if (state.bird.y - state.bird.r <= 0) {
-        state.bird.y = state.bird.r;
-        state.bird.vy = 0;
-      }
-
-      // Pipes
-      state.spawnTimer += dt;
-      if (state.spawnTimer >= CFG.pipeInterval) {
-        state.spawnTimer = 0;
-        spawnPipe();
-      }
-      for (const p of state.pipes) p.x -= CFG.pipeSpeed * dt;
-      state.pipes = state.pipes.filter(p => p.x + CFG.pipeWidth > -20);
-
-      // Collisions + scoring
-      for (const p of state.pipes) {
-        const inX =
-          state.bird.x + state.bird.r > p.x &&
-          state.bird.x - state.bird.r < p.x + CFG.pipeWidth;
-        if (inX) {
-          const topHit = state.bird.y - state.bird.r < p.gapY;
-          const bottomHit = state.bird.y + state.bird.r > p.gapY + CFG.pipeGap;
-          if (topHit || bottomHit) { die(); return; }
-        }
-        if (!p.scored && p.x + CFG.pipeWidth < state.bird.x - state.bird.r) {
-          p.scored = true;
-          state.score += 1;
-          scoreEl.textContent = state.score;
-        }
+      accumulator += Math.min(dt, MAX_FRAME);
+      while (accumulator >= STEP) {
+        accumulator -= STEP;
+        const wasPlaying = sim.state === 'play';
+        sim.step();
+        scoreEl.textContent = sim.score;
+        if (wasPlaying && sim.state === 'over') die();
       }
     }
 
     function drawBg() {
       // Deep gradient sky
-      const g = ctx.createLinearGradient(0, 0, 0, state.cssH);
+      const g = ctx.createLinearGradient(0, 0, 0, cssH);
       g.addColorStop(0, '#050508');
       g.addColorStop(1, '#0a1324');
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, state.cssW, state.cssH);
+      ctx.fillRect(0, 0, cssW, cssH);
 
       // Subtle star dots (deterministic positions via sine)
       ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      const skyH = Math.max(1, toY(GROUND_Y) - 20);
       for (let i = 0; i < 30; i++) {
-        const x = ((i * 97) % state.cssW);
-        const y = ((i * 53) % (state.cssH - GROUND_H - 20));
-        ctx.fillRect(x, y, 1.2, 1.2);
+        ctx.fillRect((i * 97) % cssW, (i * 53) % skyH, 1.2, 1.2);
       }
     }
 
     function drawPipe(p) {
-      const w = CFG.pipeWidth;
-      const topH = p.gapY;
-      const bottomY = p.gapY + CFG.pipeGap;
-      const bottomH = state.cssH - GROUND_H - bottomY;
+      const w = PIPE_HALF_W * 2 * scale;
+      const x = birdX() + (p.x - PIPE_HALF_W) * scale;
+      const topH = toY(p.gapY + GAP_HALF);
+      const bottomY = toY(p.gapY - GAP_HALF);
+      const bottomH = toY(GROUND_Y) - bottomY;
 
       // Pipe body
       ctx.fillStyle = '#0071e3';
-      ctx.fillRect(p.x, 0, w, topH);
-      ctx.fillRect(p.x, bottomY, w, bottomH);
+      ctx.fillRect(x, 0, w, topH);
+      ctx.fillRect(x, bottomY, w, bottomH);
 
       // Inner shadow (right edge darker)
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      ctx.fillRect(p.x + w - 6, 0, 6, topH);
-      ctx.fillRect(p.x + w - 6, bottomY, 6, bottomH);
+      ctx.fillRect(x + w - 6, 0, 6, topH);
+      ctx.fillRect(x + w - 6, bottomY, 6, bottomH);
 
       // Caps
       ctx.fillStyle = '#2997ff';
-      ctx.fillRect(p.x - 3, topH - 14, w + 6, 14);
-      ctx.fillRect(p.x - 3, bottomY, w + 6, 14);
+      ctx.fillRect(x - 3, topH - 14, w + 6, 14);
+      ctx.fillRect(x - 3, bottomY, w + 6, 14);
     }
 
-    function drawGround() {
-      const y = state.cssH - GROUND_H;
+    function drawGround(view) {
+      const y = toY(GROUND_Y);
       ctx.fillStyle = '#0a0a0a';
-      ctx.fillRect(0, y, state.cssW, GROUND_H);
+      ctx.fillRect(0, y, cssW, cssH - y);
       ctx.fillStyle = 'rgba(255,255,255,0.06)';
-      ctx.fillRect(0, y, state.cssW, 1);
+      ctx.fillRect(0, y, cssW, 1);
       // Diagonal stripes
       ctx.fillStyle = 'rgba(0,113,227,0.08)';
-      const offset = (state.t * CFG.pipeSpeed) % 24;
-      for (let x = -offset - 24; x < state.cssW; x += 24) {
+      const offset = (view.scroll * scale) % 24;
+      for (let x = -offset - 24; x < cssW; x += 24) {
         ctx.beginPath();
-        ctx.moveTo(x, state.cssH - 10);
-        ctx.lineTo(x + 10, state.cssH - 10);
-        ctx.lineTo(x + 20, state.cssH);
-        ctx.lineTo(x + 10, state.cssH);
+        ctx.moveTo(x, cssH - 10);
+        ctx.lineTo(x + 10, cssH - 10);
+        ctx.lineTo(x + 20, cssH);
+        ctx.lineTo(x + 10, cssH);
         ctx.closePath();
         ctx.fill();
       }
     }
 
-    function drawBird() {
-      const b = state.bird;
+    function drawBird(view) {
+      const r = BIRD_R * scale;
       ctx.save();
-      ctx.translate(b.x, b.y);
-      ctx.rotate(b.rot);
+      ctx.translate(birdX(), toY(view.y));
+      ctx.rotate(-view.rot);
       // Glow
       ctx.shadowColor = 'rgba(0,113,227,0.6)';
       ctx.shadowBlur = 18;
       // Body
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(0, 0, b.r, 0, Math.PI * 2);
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
       // Beak
       ctx.fillStyle = '#f5c518';
       ctx.beginPath();
-      ctx.moveTo(b.r - 2, -2);
-      ctx.lineTo(b.r + 8, 0);
-      ctx.lineTo(b.r - 2, 4);
+      ctx.moveTo(r - 2, -2);
+      ctx.lineTo(r + 8, 0);
+      ctx.lineTo(r - 2, 4);
       ctx.closePath();
       ctx.fill();
       // Eye
@@ -466,17 +405,17 @@
     }
 
     function render() {
+      const view = sim.view(accumulator / STEP);
       drawBg();
-      for (const p of state.pipes) drawPipe(p);
-      drawGround();
-      drawBird();
+      for (const p of view.pipes) drawPipe(p);
+      drawGround(view);
+      drawBird(view);
     }
 
     let lastT = performance.now();
     function loop(now) {
-      const dt = Math.min(0.033, (now - lastT) / 1000);
+      const dt = (now - lastT) / 1000;
       lastT = now;
-      state.t += dt;
       update(dt);
       render();
       requestAnimationFrame(loop);
@@ -489,7 +428,7 @@
     }
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space' || e.code === 'ArrowUp') onFlap(e);
-      if (e.code === 'KeyR' && state.mode === 'dead') reset();
+      if (e.code === 'KeyR' && sim.state === 'over') reset();
     });
     document.getElementById('stage').addEventListener('pointerdown', (e) => {
       // Ignore clicks on buttons/overlay elements that have their own handlers
@@ -503,7 +442,6 @@
     fitCanvas();
     reset();
     requestAnimationFrame(loop);
-  })();
   </script>
 </body>
 </html>
