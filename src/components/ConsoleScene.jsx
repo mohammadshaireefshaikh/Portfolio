@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { createCabinetSides, getArcadeFraming, getRoomFov, getArcadeSignPosition } from "./arcadeGeometry";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float, ContactShadows, RoundedBox, OrbitControls, useGLTF, Html } from "@react-three/drei";
-import { X, Volume2, VolumeX, Play, Trophy, RotateCcw } from "lucide-react";
+import { X, Volume2, VolumeX, Play, Trophy, RotateCcw, CircleHelp } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 import { FlappySim, STEP, MAX_FRAME, VIEW_H, GROUND_Y, PIPE_HALF_W, medalFor } from "./flappySim";
 import { GhostRun, GHOST_X, RoyaleMatch, ROYALE_BOTS, encodeRun, decodeRun } from "./flappyModes";
@@ -525,7 +525,7 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath, runRef) {
       }
     }
 
-    s.accumulator = dt > MAX_FRAME ? 0 : s.accumulator + dt;
+    if (!run?.paused) s.accumulator = dt > MAX_FRAME ? 0 : s.accumulator + dt;
     while (s.accumulator >= STEP) {
       s.accumulator -= STEP;
       const wasPlaying = s.sim.state === "play";
@@ -641,6 +641,12 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath, runRef) {
         g2d.font = "bold 13px system-ui, sans-serif";
         g2d.fillText(line, W / 2, H / 2 - 54);
       }
+      g2d.fillStyle = "rgba(255,255,255,0.75)";
+      g2d.font = "bold 13px system-ui, sans-serif";
+      g2d.fillText("FLY THROUGH THE GAPS", W / 2, H / 2 + 44);
+      g2d.font = "12px system-ui, sans-serif";
+      g2d.fillText("MEDALS AT 10 · 20 · 30 · 40", W / 2, H / 2 + 66);
+      g2d.fillText("PRESS ? FOR HOW TO PLAY", W / 2, H / 2 + 88);
     } else if (s.sim.state === "play") {
       g2d.fillStyle = "rgba(255,255,255,0.22)";
       g2d.font = "bold 56px system-ui, sans-serif";
@@ -1949,6 +1955,7 @@ export default function ConsoleScene() {
     try { return localStorage.getItem("flappy.name") || ""; } catch { return ""; }
   });
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const flapRef = useRef(false);
   // What the next run should be, and how the last one went. Read by the screen hook.
@@ -1962,6 +1969,7 @@ export default function ConsoleScene() {
       lastRun: null,
       placement: null,
       beatGhost: false,
+      paused: false,
     };
   }
   const deadAt = useRef(0);
@@ -2047,6 +2055,15 @@ export default function ConsoleScene() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.target?.matches?.("input, textarea") && e.code !== "Escape") return;
+      const helpKey = (e.code === "KeyH" || e.key === "?") && !e.repeat;
+      if (showHelp) {
+        if (helpKey) setShowHelp(false);
+        return; // Escape belongs to the dialog while it is open
+      }
+      if (helpKey && (mode === "playing" || mode === "dead")) {
+        setShowHelp(true);
+        return;
+      }
       if (mode === "playing") {
         if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); flap(); }
         if (e.code === "Escape") setMode("idle");
@@ -2058,7 +2075,11 @@ export default function ConsoleScene() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, isMuted]);
+  }, [mode, isMuted, showHelp]);
+
+  useEffect(() => {
+    runRef.current.paused = showHelp;
+  }, [showHelp]);
 
   // Scroll lock + mode broadcast
   useEffect(() => {
@@ -2252,8 +2273,20 @@ export default function ConsoleScene() {
             </div>
           </div>
 
-          {/* TOP-RIGHT: Mute + Exit */}
+          {/* TOP-RIGHT: Help + Mute + Exit */}
           <div className="fixed top-5 right-5 z-10 flex items-center gap-2">
+            <button
+              onClick={() => setShowHelp(true)}
+              aria-label="How to play"
+              className="w-11 h-11 flex items-center justify-center rounded-full text-[#86868b] hover:text-white transition-colors"
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              <CircleHelp size={16} aria-hidden="true" />
+            </button>
             <button
               onClick={() => { const n = !isMuted; setIsMuted(n); setMuted(n); }}
               aria-label={isMuted ? "Unmute" : "Mute"}
@@ -2285,7 +2318,7 @@ export default function ConsoleScene() {
               className="pointer-events-none fixed bottom-5 left-1/2 -translate-x-1/2 z-10 w-[calc(100%_-_2rem)] max-w-md text-center text-[9px] sm:text-[10px] tracking-[0.15em] uppercase text-[#86868b]"
               style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
             >
-              SPACE / TAP FLAP · M MUTE · ESC EXIT
+              SPACE / TAP FLAP · <span className="hidden sm:inline">H HELP · </span>M MUTE · ESC EXIT
             </div>
           )}
 
@@ -2448,11 +2481,19 @@ export default function ConsoleScene() {
                 <p className="text-[10px] text-[#86868b] text-center mt-5 tracking-[0.1em]">
                   SPACE REPLAY · ESC EXIT
                 </p>
+                <button
+                  onClick={() => setShowHelp(true)}
+                  className="mt-1 mx-auto flex min-h-11 items-center gap-1.5 px-3 text-[11px] tracking-[0.05em] text-[#86868b] hover:text-white transition-colors"
+                >
+                  <CircleHelp size={13} aria-hidden="true" /> HOW TO PLAY
+                </button>
               </div>
             </div>
           )}
 
           {/* LEADERBOARD MODAL */}
+          <HowToPlay open={showHelp} onClose={() => setShowHelp(false)} />
+
           {showLeaderboard && (
             <div
               className="fixed inset-0 z-30 flex items-center justify-center p-6"
@@ -2534,6 +2575,80 @@ function HoverLabel() {
         Click to play
       </div>
     </div>
+  );
+}
+
+/**
+ * How-to-play panel. A native <dialog>, so focus stays inside, Escape closes it
+ * and focus returns to the button that opened it. The run pauses while it is up.
+ */
+const HELP_SECTION = "text-[10px] tracking-[0.2em] uppercase text-[#2997ff] mt-5 mb-2";
+const HELP_MODES = [
+  ["Revive", "Carry on with your score, once per run. Not in Chase or Royale."],
+  ["Chase best", "Race the ghost of your best run on the same pipes."],
+  ["Royale", `Fly the same pipes with ${ROYALE_BOTS} bots. Be the last bird flying.`],
+  ["Copy challenge", "Copy a link so a friend can race your run."],
+  ["Submit score", "Save your name and score in the Hall on this device."],
+];
+function HowToPlay({ open, onClose }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby="flappy-help-title"
+      onClose={onClose}
+      onClick={(e) => { if (e.target === ref.current) onClose(); }}
+      className="m-auto w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-0 rounded-2xl text-white backdrop:bg-black/75"
+      style={{
+        background: "#0a0d14",
+        border: "1px solid rgba(255,255,255,0.1)",
+        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+      }}
+    >
+      <div className="p-6">
+        <div className="flex items-center justify-between gap-4">
+          <h2 id="flappy-help-title" className="text-sm font-semibold tracking-[0.15em] uppercase">How to play</h2>
+          <button
+            onClick={onClose}
+            className="min-h-11 px-3 text-[11px] tracking-[0.05em] rounded-md text-white border border-white/30 hover:border-white transition-colors"
+          >
+            CLOSE
+          </button>
+        </div>
+
+        <p className="text-sm text-[#d1d1d6] leading-relaxed mt-3">
+          Flap to stay in the air and fly through the gaps. Each pipe you pass scores 1. Hitting a pipe or the ground ends the run.
+        </p>
+
+        <h3 className={HELP_SECTION}>Controls</h3>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+          <dt className="text-white">Flap</dt><dd className="text-[#d1d1d6]">Space, Up arrow, tap or click</dd>
+          <dt className="text-white">Play again</dt><dd className="text-[#d1d1d6]">Space, Enter or Replay</dd>
+          <dt className="text-white">Help</dt><dd className="text-[#d1d1d6]">H or ?</dd>
+          <dt className="text-white">Mute</dt><dd className="text-[#d1d1d6]">M</dd>
+          <dt className="text-white">Exit</dt><dd className="text-[#d1d1d6]">Esc</dd>
+        </dl>
+
+        <h3 className={HELP_SECTION}>Medals</h3>
+        <p className="text-xs text-[#d1d1d6]">10 Bronze · 20 Silver · 30 Gold · 40 Platinum</p>
+
+        <h3 className={HELP_SECTION}>After a run</h3>
+        <dl className="flex flex-col gap-2 text-xs">
+          {HELP_MODES.map(([name, text]) => (
+            <div key={name}>
+              <dt className="text-white">{name}</dt>
+              <dd className="text-[#d1d1d6] leading-relaxed">{text}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </dialog>
   );
 }
 
