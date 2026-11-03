@@ -103,15 +103,16 @@ export default function Hero() {
               <span style={{ color: "#86868b" }}> · </span>
               {personal.subtitle}
             </motion.p>
-            <motion.a
+            <motion.button
+              type="button"
               variants={itemVariants}
-              href={`${import.meta.env.BASE_URL}flappy.html`}
+              onClick={() => window.dispatchEvent(new CustomEvent("play-flappy"))}
               className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-xs text-[#86868b] hover:text-[#2997ff] transition-colors duration-200"
               style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}
             >
               <span>▸</span>
               <span>THE CABINET RUNS FLAPPY — CLICK IT</span>
-            </motion.a>
+            </motion.button>
           </div>
 
           {/* Actions */}

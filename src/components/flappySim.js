@@ -1,46 +1,68 @@
-// Deterministic Flappy sim: a fixed 60 steps/s and a seeded generator, so a seed
-// plus the steps it flapped on always replays to the same score. Used by the
-// cabinet screen and flappy.html.
-// World units, y up, bird at x = 0. One unit is 100px on the cabinet's 400px screen.
-export const HZ = 60;
+// Deterministic Flappy sim: 120 steps/s in 2^20 fixed point, so a seed plus the
+// steps it flapped on always replays to the same score. World units, y up, bird
+// at x = 0. Drives the game on the cabinet screen.
+const ONE = 1 << 20;
+const fx = (v) => Math.round(v * ONE);
+
+export const HZ = 120;
 export const STEP = 1 / HZ;
-export const MAX_FRAME = 0.1; // a stalled frame slows the game instead of skipping it
-export const VIEW_H = 4;
-export const GROUND_Y = -1.62;
-export const BIRD_R = 0.1;
-export const PIPE_HALF_W = 0.16;
-export const GAP_HALF = 0.36;
+export const MAX_FRAME = 0.25; // longer frames (hidden tab, stall) are dropped, not caught up
+export const VIEW_H = 2.56; // world height one screen shows
+export const GROUND_Y = -0.975;
+export const BIRD_R = 0.068;
+export const PIPE_HALF_W = 0.13;
 
-const GRAVITY = 5.4;
-const FLAP = 1.95;
-const SPEED = 0.95;
-const CEILING = VIEW_H / 2 - BIRD_R;
-const FLOOR = GROUND_Y + BIRD_R;
-const SPAWN_X = 2.76;
-const DESPAWN_X = -1.12;
-const SPAWN_STEPS = 78; // 1.3s between pipes
-const GAP_MIN = GROUND_Y + 0.25 + GAP_HALF;
-const GAP_MAX = VIEW_H / 2 - 0.25 - GAP_HALF;
-const MAX_GAP_SHIFT = 0.7; // keeps the next gap reachable in the time between pipes
+const G = Math.trunc(fx(5) / HZ);
+const FLAP = fx(1.4);
+const FALL_CAP = fx(2.2);
+const GROUND = fx(GROUND_Y);
+const R = fx(BIRD_R);
+const R2 = R * R;
+const HALF_W = Math.trunc((26 * fx(0.01)) / 2);
+const SCROLL = Math.trunc(fx(0.6) / HZ);
+const SPAWN_X = fx(1.2);
+const DESPAWN_X = fx(-1.2);
+const SPACING = fx(1);
+const FIRST_PIPE_STEP = 180;
+const HALF_GAP = Math.trunc(fx(0.47) / 2);
+const OPENING_HALF_GAPS = [0.62, 0.59, 0.56, 0.53, 0.5].map((g) => Math.trunc(fx(g) / 2));
+const GAP_MIN_Y = fx(-0.2);
+const GAP_RANGE = fx(0.8) - GAP_MIN_Y;
+const FAR = fx(10);
+const TILT = Math.PI / 8;
 
-// mulberry32
+const MASK64 = (1n << 64n) - 1n;
+
+// SplitMix64.
 export function makeRng(seed) {
-  let a = seed >>> 0;
+  let state = BigInt(seed) & MASK64;
   return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    state = (state + 0x9e3779b97f4a7c15n) & MASK64;
+    let z = state;
+    z = ((z ^ (z >> 30n)) * 0xbf58476d1ce4e5b9n) & MASK64;
+    z = ((z ^ (z >> 27n)) * 0x94d049bb133111ebn) & MASK64;
+    return (z ^ (z >> 31n)) & MASK64;
   };
 }
 
 export function randomSeed() {
-  return crypto.getRandomValues(new Uint32Array(1))[0];
+  const a = new BigUint64Array(1);
+  crypto.getRandomValues(a);
+  return a[0] & ((1n << 53n) - 1n);
 }
 
 export function medalFor(score) {
-  return score >= 50 ? "PLATINUM" : score >= 30 ? "GOLD" : score >= 15 ? "SILVER" : score >= 5 ? "BRONZE" : null;
+  return score >= 40 ? "PLATINUM" : score >= 30 ? "GOLD" : score >= 20 ? "SILVER" : score >= 10 ? "BRONZE" : null;
+}
+
+// Circle against the pipe rectangles, which run far past the top of the screen.
+function hitsPipe(y, pipe) {
+  const dx = -Math.max(pipe.x - HALF_W, Math.min(0, pipe.x + HALF_W));
+  if (Math.abs(dx) >= R) return null;
+  const bottom = y - Math.max(-FAR, Math.min(y, pipe.gapY - pipe.halfGap));
+  if (dx * dx + bottom * bottom < R2) return "pipeBottom";
+  const top = y - Math.max(pipe.gapY + pipe.halfGap, Math.min(y, FAR));
+  return dx * dx + top * top < R2 ? "pipeTop" : null;
 }
 
 export class FlappySim {
@@ -54,11 +76,12 @@ export class FlappySim {
   cause = null;
   scroll = 0;
   time = 0;
-  spawnIn = SPAWN_STEPS;
-  lastGap = 0;
+  spawned = 0;
   prevY = 0;
   prevRot = 0;
   moved = 0;
+  flaps = [];
+  revived = false;
 
   constructor(seed = randomSeed()) {
     this.seed = seed;
@@ -67,8 +90,26 @@ export class FlappySim {
 
   flap() {
     if (this.state === "over") return;
-    this.state = "play";
+    if (this.state === "ready") {
+      this.state = "play";
+      this.y = 0;
+    }
     this.vy = FLAP;
+    if (this.flaps[this.flaps.length - 1] !== this.steps) this.flaps.push(this.steps);
+  }
+
+  // One second chance per run: pipes clear and the bird restarts mid-screen.
+  revive() {
+    if (this.state !== "over" || this.revived) return;
+    this.revived = true;
+    this.state = "play";
+    this.cause = null;
+    this.pipes = [];
+    this.y = 0;
+    this.prevY = 0;
+    this.vy = FLAP;
+    this.rot = TILT;
+    this.prevRot = TILT;
   }
 
   step() {
@@ -76,34 +117,27 @@ export class FlappySim {
     this.prevRot = this.rot;
     this.moved = 0;
     this.time += STEP;
+    const wasPlaying = this.state === "play";
 
     if (this.state === "ready") {
-      this.y = Math.sin(this.time * 4) * 0.06;
-      this.scroll += SPEED * STEP;
-      return;
+      this.y = fx(Math.sin(this.time * 5) * 0.05);
+    } else {
+      // Keeps falling after a pipe hit, until it lands.
+      if (this.vy < -FALL_CAP) this.vy = -FALL_CAP;
+      this.vy -= G;
+      this.y += Math.trunc(this.vy / HZ);
+      if (this.y - R < GROUND) {
+        this.y = GROUND + R;
+        this.vy = 0;
+        if (wasPlaying) this.die("ground");
+      }
+      if (this.state === "play") this.checkPipes();
+      if (this.state === "play") this.advancePipes();
+      this.rot = this.vy > 0 ? TILT : Math.max(-Math.PI / 2, TILT + (this.vy / ONE) * 0.5);
     }
 
-    // Keeps falling after a pipe hit, until it lands.
-    const playing = this.state === "play";
-    this.vy -= GRAVITY * STEP;
-    this.y += this.vy * STEP;
-    if (this.y > CEILING) {
-      this.y = CEILING;
-      this.vy = 0;
-    }
-    if (this.y < FLOOR) {
-      this.y = FLOOR;
-      this.vy = 0;
-      if (playing) this.die("ground");
-    }
-    this.rot = Math.max(-1.2, Math.min(0.5, this.vy * 0.32));
-
-    if (this.state === "play") {
-      this.movePipes();
-      this.checkPipes();
-      this.scroll += SPEED * STEP;
-    }
-    if (playing) this.steps += 1;
+    if (this.state !== "over") this.scroll += SCROLL;
+    if (wasPlaying) this.steps += 1;
   }
 
   die(cause) {
@@ -111,52 +145,54 @@ export class FlappySim {
     this.cause = cause;
   }
 
-  movePipes() {
-    this.spawnIn -= 1;
-    if (this.spawnIn <= 0) {
-      this.spawnIn = SPAWN_STEPS;
-      const low = Math.max(GAP_MIN, this.lastGap - MAX_GAP_SHIFT);
-      const high = Math.min(GAP_MAX, this.lastGap + MAX_GAP_SHIFT);
-      this.lastGap = low + this.rng() * (high - low);
-      this.pipes.push({ x: SPAWN_X, gapY: this.lastGap, scored: false });
-    }
-    this.moved = SPEED * STEP;
-    for (const pipe of this.pipes) pipe.x -= this.moved;
-    this.pipes = this.pipes.filter((pipe) => pipe.x > DESPAWN_X);
-  }
-
   checkPipes() {
     for (const pipe of this.pipes) {
-      if (Math.abs(pipe.x) < PIPE_HALF_W + BIRD_R) {
-        if (this.y + BIRD_R > pipe.gapY + GAP_HALF) return this.die("pipeTop");
-        if (this.y - BIRD_R < pipe.gapY - GAP_HALF) return this.die("pipeBottom");
-      }
-      if (!pipe.scored && pipe.x < -(PIPE_HALF_W + BIRD_R)) {
-        pipe.scored = true;
+      const cause = hitsPipe(this.y, pipe);
+      if (cause) return this.die(cause);
+    }
+  }
+
+  advancePipes() {
+    const last = this.pipes[this.pipes.length - 1];
+    if (last ? SPAWN_X - last.x >= SPACING : this.steps >= FIRST_PIPE_STEP) {
+      this.pipes.push({
+        x: SPAWN_X,
+        gapY: GAP_MIN_Y + Math.trunc((Number(this.rng() % BigInt(ONE)) * GAP_RANGE) / ONE),
+        // The first few gaps are wider, easing the player in.
+        halfGap: OPENING_HALF_GAPS[this.spawned] ?? HALF_GAP,
+        passed: false,
+      });
+      this.spawned += 1;
+    }
+    this.moved = SCROLL;
+    for (const pipe of this.pipes) {
+      pipe.x -= SCROLL;
+      if (!pipe.passed && pipe.x <= 0) {
+        pipe.passed = true;
         this.score += 1;
       }
     }
+    if (this.pipes.length > 0 && this.pipes[0].x < DESPAWN_X) this.pipes.shift();
   }
 
-  // Attract-mode pilot: flap when sinking below the aim point. Past a pipe's middle
-  // it starts sinking toward a lower next gap, without dropping out of the current one.
-  wantsFlap() {
-    const i = this.pipes.findIndex((pipe) => pipe.x > -(PIPE_HALF_W + BIRD_R));
-    const pipe = this.pipes[i];
-    const after = this.pipes[i + 1];
-    let aim = pipe ? pipe.gapY - 0.16 : -0.16;
-    if (pipe && after && pipe.x < 0) aim = Math.max(Math.min(aim, after.gapY - 0.16), pipe.gapY - GAP_HALF + BIRD_R + 0.1);
-    const below = aim - this.y;
-    return below > 0 && this.vy < (below > 0.3 ? FLAP * 0.4 : 0);
+  // Attract-mode pilot: flap when falling below the next gap's aim point.
+  wantsFlap(offset = 0) {
+    const next = this.pipes.find((p) => p.x + HALF_W + R > 0);
+    const aim = (next ? next.gapY - fx(0.1) : 0) + fx(offset);
+    return this.y < aim && this.vy <= 0;
   }
 
-  // Snapshot blended between the last two steps by `alpha` (0..1).
+  // World-unit snapshot, blended between the last two steps by `alpha` (0..1).
   view(alpha) {
     return {
-      y: this.prevY + (this.y - this.prevY) * alpha,
+      y: (this.prevY + (this.y - this.prevY) * alpha) / ONE,
       rot: this.prevRot + (this.rot - this.prevRot) * alpha,
-      scroll: this.scroll - SPEED * STEP * (1 - alpha),
-      pipes: this.pipes.map((pipe) => ({ x: pipe.x + this.moved * (1 - alpha), gapY: pipe.gapY })),
+      scroll: (this.scroll - SCROLL * (1 - alpha)) / ONE,
+      pipes: this.pipes.map((p) => ({
+        x: (p.x + this.moved * (1 - alpha)) / ONE,
+        gapY: p.gapY / ONE,
+        halfGap: p.halfGap / ONE,
+      })),
     };
   }
 }

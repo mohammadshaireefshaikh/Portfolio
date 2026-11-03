@@ -10,6 +10,10 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
  * radially outward and fall, debris arcs out and smoke lingers. Unmounts via
  * onDone once every slab and chunk is gone. The room's quake, scorch and all
  * sounds stay in ConsoleScene (same event, same timeline).
+ *
+ * Before the click the wall answers the ENTER button ('room-hover'): slabs near
+ * the pointer work loose, light from the room leaks through the seams, and a
+ * press pushes them back in.
  */
 const ROWS = 11;
 const DEBRIS_N = 160;
@@ -37,7 +41,7 @@ function softDiscTexture() {
   return new THREE.CanvasTexture(c);
 }
 
-function Slabs({ blastAt, arming, onGone }) {
+function Slabs({ blastAt, arming, onGone, hover, reduceMotion }) {
   const { size } = useThree();
   const mesh = useRef(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
@@ -82,6 +86,14 @@ function Slabs({ blastAt, arming, onGone }) {
     if (!mesh.current || gone.current) return;
     const now = performance.now();
     let allGone = blastAt != null;
+    const h = hover.current;
+    h.value += (h.target - h.value) * 0.12;
+    h.press += (h.pressTarget - h.press) * 0.25;
+    const { halfH } = viewBasis(size);
+    const hx = h.nx * (halfH / 1.08) * (size.width / Math.max(1, size.height));
+    const hy = h.ny * (halfH / 1.08);
+    h.x = hx;
+    h.y = hy;
     data.items.forEach((it, i) => {
       const t = blastAt == null ? -1 : (now - blastAt) / 1000 - it.delay;
       let s = 1;
@@ -104,8 +116,17 @@ function Slabs({ blastAt, arming, onGone }) {
             it.y + Math.cos(now * 0.09 + it.seed * 2) * j,
             0
           );
+        } else if (reduceMotion) {
+          dummy.position.set(it.x, it.y, 0);
         } else {
-          dummy.position.set(it.x, it.y, Math.sin(now * 0.002 + it.seed) * 0.03);
+          const near = Math.max(0, 1 - Math.hypot(it.x - hx, it.y - hy) / (data.cell * 3.2));
+          const loose = near * near * h.value;
+          dummy.position.set(
+            it.x + Math.sin(now * 0.03 + it.seed) * 0.014 * loose,
+            it.y + Math.cos(now * 0.04 + it.seed * 2) * 0.014 * loose,
+            Math.sin(now * 0.002 + it.seed) * 0.03 + loose * (0.4 + 0.3 * Math.sin(it.seed)) - h.press * near * 0.5
+          );
+          dummy.rotation.set(Math.sin(it.seed) * 0.08 * loose, Math.cos(it.seed * 1.7) * 0.08 * loose, 0);
         }
       }
       dummy.scale.set(s, s, s * it.depth);
@@ -121,6 +142,37 @@ function Slabs({ blastAt, arming, onGone }) {
       <boxGeometry args={[data.cell * 0.97, data.cell * 0.97, data.cell * 0.5]} />
       <meshStandardMaterial color="#ffffff" roughness={0.95} metalness={0.02} flatShading />
     </instancedMesh>
+  );
+}
+
+// Light from the room behind the wall: only the seams let it through. A torch
+// in front picks out the slabs around the pointer.
+function WallLight({ hover, arming, blastAt, reduceMotion }) {
+  const glow = useRef(null);
+  const torch = useRef(null);
+  const disc = useMemo(softDiscTexture, []);
+  useEffect(() => () => disc.dispose(), [disc]);
+
+  useFrame(() => {
+    const h = hover.current;
+    const fade = blastAt == null ? 1 : THREE.MathUtils.clamp(1 - (performance.now() - blastAt) / 300, 0, 1);
+    if (glow.current) {
+      glow.current.position.set(h.x, h.y, -0.8);
+      glow.current.material.opacity = Math.min(1, 0.14 + h.value * 0.8 + h.press * 0.4 + (arming ? 0.6 : 0)) * fade;
+    }
+    if (torch.current) {
+      torch.current.position.set(h.x, h.y, 3.5);
+      torch.current.intensity = reduceMotion ? 0 : (h.value * 60 + h.press * 24) * fade;
+    }
+  });
+
+  return (
+    <>
+      <sprite ref={glow} scale={[18, 18, 1]}>
+        <spriteMaterial map={disc} color="#8cc4ff" transparent opacity={0} />
+      </sprite>
+      <pointLight ref={torch} color="#a9d0ff" intensity={0} distance={14} />
+    </>
   );
 }
 
@@ -222,6 +274,21 @@ export default function IntroCurtain({ reduceMotion, onDone }) {
   const [blastAt, setBlastAt] = useState(null);
   const [slabsGone, setSlabsGone] = useState(false);
   const [fxOver, setFxOver] = useState(false);
+  const hover = useRef({ target: 0, value: 0, pressTarget: 0, press: 0, nx: 0, ny: -0.2, x: 0, y: 0 });
+
+  useEffect(() => {
+    const onHover = ({ detail }) => {
+      const h = hover.current;
+      h.target = detail.active ? 1 : 0;
+      h.pressTarget = detail.press ? 1 : 0;
+      if (detail.active) {
+        h.nx = detail.x;
+        h.ny = detail.y;
+      }
+    };
+    window.addEventListener("room-hover", onHover);
+    return () => window.removeEventListener("room-hover", onHover);
+  }, []);
 
   useEffect(() => {
     const onEnter = () => {
@@ -256,7 +323,8 @@ export default function IntroCurtain({ reduceMotion, onDone }) {
         <hemisphereLight args={["#cfd6e0", "#24262c", 0.6]} />
         <directionalLight position={[-6, 9, 12]} intensity={2.2} color="#ffe4c8" />
         <directionalLight position={[7, 6, 10]} intensity={1.1} color="#d2e6ff" />
-        {!slabsGone && <Slabs blastAt={blastAt} arming={arming} onGone={() => setSlabsGone(true)} />}
+        {!slabsGone && <Slabs blastAt={blastAt} arming={arming} onGone={() => setSlabsGone(true)} hover={hover} reduceMotion={reduceMotion} />}
+        {!slabsGone && <WallLight hover={hover} arming={arming} blastAt={blastAt} reduceMotion={reduceMotion} />}
         {blastAt != null && !fxOver && <Blast at={blastAt} />}
       </Canvas>
     </div>

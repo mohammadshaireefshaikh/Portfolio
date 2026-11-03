@@ -40,13 +40,15 @@
   <p>The contact form does not send anything to this site. Pressing send opens your own email application with the message pre-filled; the message is only sent if you send it from there, and only to my email address (hosted by Google). I keep enquiry emails for as long as needed to reply and follow up. Lawful basis: your request / legitimate interest.</p>
 
   <h2>3. Flappy game and local storage</h2>
-  <p>The arcade game keeps your best score and chosen nickname in your own browser so they are there next time. This data never leaves your device unless you choose to email a score to me. You can clear it from your browser settings at any time.</p>
+  <p>The arcade game keeps your best score and chosen nickname in your own browser so they are there next time. This data never leaves your device unless you choose to email a score to me or copy a challenge link, which holds that run's seed and flaps but no name. You can clear it from your browser settings at any time.</p>
   <table>
     <thead><tr><th>Key</th><th>Purpose</th><th>Where</th><th>Duration</th></tr></thead>
     <tbody>
       <tr><td><code>flappy.best</code></td><td>Your best score</td><td>Your browser (localStorage)</td><td>Until you clear it</td></tr>
       <tr><td><code>flappy.name</code></td><td>Nickname you typed</td><td>Your browser (localStorage)</td><td>Until you clear it</td></tr>
       <tr><td><code>flappy.scores</code></td><td>Your own score history</td><td>Your browser (localStorage)</td><td>Until you clear it</td></tr>
+      <tr><td><code>flappy.bestRun</code></td><td>Your best run, so you can race its ghost</td><td>Your browser (localStorage)</td><td>Until you clear it</td></tr>
+      <tr><td><code>flappy.today</code></td><td>Your best score today</td><td>Your browser (localStorage)</td><td>Until you clear it</td></tr>
     </tbody>
   </table>
   <p>All of these are strictly necessary for the feature you chose to use, so no cookie banner is shown.</p>

@@ -5,7 +5,8 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float, ContactShadows, RoundedBox, OrbitControls, useGLTF, Html } from "@react-three/drei";
 import { X, Volume2, VolumeX, Play, Trophy, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
-import { FlappySim, STEP, MAX_FRAME, VIEW_H, GROUND_Y, PIPE_HALF_W, GAP_HALF, medalFor } from "./flappySim";
+import { FlappySim, STEP, MAX_FRAME, VIEW_H, GROUND_Y, PIPE_HALF_W, medalFor } from "./flappySim";
+import { GhostRun, GHOST_X, RoyaleMatch, ROYALE_BOTS, encodeRun, decodeRun } from "./flappyModes";
 
 // Camera targets (play distance computed in CameraRig)
 // IDLE is a far, long-lens 3/4 "isometric" view — ported from the FixMyHair
@@ -396,7 +397,33 @@ function drawBat(ctx, cx, cy, frame, cell = 3) {
 }
 
 // ─── Flappy screen ────────────────────────────────────────────
-function useFlappyTexture(mode, flapRef, onScore, onDeath) {
+// Sprites are pre-rendered and smoothed as they turn, so the tilted bat keeps its shape.
+const BAT_SPRITES = new Map();
+const BAT_CELL = 40;
+function batSprite(frame, color) {
+  const key = `${frame}${color}`;
+  if (!BAT_SPRITES.has(key)) {
+    const c = document.createElement("canvas");
+    c.width = c.height = BAT_CELL;
+    const g = c.getContext("2d");
+    g.fillStyle = color;
+    drawBat(g, BAT_CELL / 2, BAT_CELL / 2, frame, 3);
+    BAT_SPRITES.set(key, c);
+  }
+  return BAT_SPRITES.get(key);
+}
+function drawSprite(g, sprite, x, y, rot, size = 1, alpha = 1) {
+  g.save();
+  g.globalAlpha = alpha;
+  g.imageSmoothingEnabled = true;
+  g.translate(x, y);
+  g.rotate(-rot);
+  g.scale(size, size);
+  g.drawImage(sprite, -BAT_CELL / 2, -BAT_CELL / 2);
+  g.restore();
+}
+
+function useFlappyTexture(mode, flapRef, onScore, onDeath, runRef) {
   const texture = useMemo(() => {
     const canvas = document.createElement("canvas");
     // Portrait 0.8 — drawn on our own plane fitted to the Goliath's bezel
@@ -404,7 +431,7 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     canvas.width = 320;
     canvas.height = 400;
     const t = new THREE.CanvasTexture(canvas);
-    t.minFilter = THREE.NearestFilter;
+    t.minFilter = THREE.LinearFilter;
     t.magFilter = THREE.NearestFilter;
     t.colorSpace = THREE.SRGBColorSpace;
     return t;
@@ -415,6 +442,10 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     stateRef.current = {
       canvas: texture.image,
       sim: new FlappySim(),
+      ghost: null,
+      royale: null,
+      started: false,
+      beatenAt: null,
       accumulator: 0,
       particles: [],
       frameTimer: 0,
@@ -424,7 +455,12 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
 
   function reset() {
     const s = stateRef.current;
-    s.sim = new FlappySim();
+    const chase = mode === "playing" ? runRef?.current.chase : null;
+    s.sim = new FlappySim(chase?.seed);
+    s.ghost = null;
+    s.royale = null;
+    s.started = false;
+    s.beatenAt = null;
     s.accumulator = 0;
     s.particles = [];
     if (mode === "idle") s.sim.flap(); // attract mode is already flying
@@ -432,7 +468,19 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
   }
 
   // "dead" keeps the run on screen: the bat falls behind the game-over panel.
-  useEffect(() => { if (mode !== "dead") reset(); /* eslint-disable-next-line */ }, [mode]);
+  useEffect(() => {
+    if (mode === "dead") return;
+    const run = runRef?.current;
+    if (mode === "playing" && run?.reviving) {
+      run.reviving = false;
+      stateRef.current.sim.revive();
+      stateRef.current.accumulator = 0;
+      sfx.flap();
+      return;
+    }
+    reset();
+    /* eslint-disable-next-line */
+  }, [mode]);
 
   function burst(x, y) {
     const s = stateRef.current;
@@ -462,8 +510,9 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     const W = s.canvas.width;
     const H = s.canvas.height;
     const scale = H / VIEW_H;
+    const toX = (x) => W / 2 + x * scale;
     const toY = (y) => H / 2 - y * scale;
-    const birdX = 70;
+    const run = runRef?.current;
 
     s.frameTimer += dt * (s.sim.vy > 0 ? 14 : 7);
     if (s.frameTimer > 1) { s.frameTimer = 0; s.frame = 1 - s.frame; }
@@ -476,23 +525,38 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
       }
     }
 
-    s.accumulator += Math.min(dt, MAX_FRAME);
+    s.accumulator = dt > MAX_FRAME ? 0 : s.accumulator + dt;
     while (s.accumulator >= STEP) {
       s.accumulator -= STEP;
       const wasPlaying = s.sim.state === "play";
       const scoreBefore = s.sim.score;
       if (mode === "idle" && s.sim.wantsFlap()) s.sim.flap();
+      if (mode === "playing" && wasPlaying && !s.started) {
+        s.started = true;
+        if (run?.chase) s.ghost = new GhostRun(run.chase);
+        else if (run?.royale) s.royale = new RoyaleMatch(s.sim.seed);
+      }
       s.sim.step();
+      if (wasPlaying) {
+        s.ghost?.advance();
+        s.royale?.advance();
+      }
       if (mode === "playing" && s.sim.score > scoreBefore) {
         sfx.score();
-        sparkle(birdX + 20, toY(s.sim.view(1).y));
+        sparkle(W / 2 + 20, toY(s.sim.view(1).y));
         onScore?.(s.sim.score);
+        if (s.ghost && s.beatenAt === null && s.sim.score > s.ghost.score) s.beatenAt = s.sim.time;
       }
       if (wasPlaying && s.sim.state === "over") {
-        burst(birdX, toY(s.sim.view(1).y));
+        burst(W / 2, toY(s.sim.view(1).y));
         if (mode === "playing") {
           sfx.boom();
           shake.amp = 0.16;
+          if (run) {
+            run.lastRun = { seed: s.sim.seed, flaps: [...s.sim.flaps], score: s.sim.score, revived: s.sim.revived };
+            run.placement = s.royale ? s.royale.placement() : null;
+            run.beatGhost = s.beatenAt !== null;
+          }
           onDeath?.(s.sim.score);
         } else {
           reset();
@@ -510,7 +574,8 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     s.particles = s.particles.filter((p) => p.life > 0);
 
     // Draw
-    const view = s.sim.view(s.accumulator / STEP);
+    const alpha = s.accumulator / STEP;
+    const view = s.sim.view(alpha);
     const groundY = toY(GROUND_Y);
     const pipeW = PIPE_HALF_W * 2 * scale;
     const g2d = s.canvas.getContext("2d");
@@ -522,9 +587,9 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     g2d.fillRect(0, 0, W, H);
 
     for (const p of view.pipes) {
-      const x = birdX + (p.x - PIPE_HALF_W) * scale;
-      const top = toY(p.gapY + GAP_HALF);
-      const bottom = toY(p.gapY - GAP_HALF);
+      const x = toX(p.x - PIPE_HALF_W);
+      const top = toY(p.gapY + p.halfGap);
+      const bottom = toY(p.gapY - p.halfGap);
       g2d.fillStyle = "#0071e3";
       g2d.fillRect(x, 0, pipeW, top);
       g2d.fillRect(x, bottom, pipeW, groundY - bottom);
@@ -542,8 +607,21 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
       g2d.fillRect(x, groundY + 8, 12, 4);
     }
 
-    g2d.fillStyle = s.sim.state === "over" ? "#777780" : "#f0ca75";
-    drawBat(g2d, birdX, toY(view.y), s.sim.state === "over" ? 0 : s.frame, 3);
+    if (s.royale) {
+      for (const bot of s.royale.bots) {
+        if (!bot.visible) continue;
+        const v = bot.sim.view(alpha);
+        const dead = bot.sim.state === "over";
+        drawSprite(g2d, batSprite(dead ? 0 : s.frame, bot.tint), toX(bot.x), toY(v.y), v.rot, 0.75, dead ? 0.3 : 0.6);
+      }
+    }
+    if (s.ghost?.alive && s.beatenAt === null && s.sim.state === "play") {
+      const v = s.ghost.sim.view(alpha);
+      drawSprite(g2d, batSprite(s.frame, "#9ec8ff"), toX(GHOST_X), toY(v.y), v.rot, 1, 0.45);
+    }
+
+    const over = s.sim.state === "over";
+    drawSprite(g2d, batSprite(over ? 0 : s.frame, over ? "#777780" : "#f0ca75"), W / 2, toY(view.y), view.rot);
 
     for (const p of s.particles) {
       g2d.globalAlpha = Math.max(0, p.life / p.max);
@@ -552,16 +630,45 @@ function useFlappyTexture(mode, flapRef, onScore, onDeath) {
     }
     g2d.globalAlpha = 1;
 
-    if (s.sim.state === "ready") {
+    g2d.textAlign = "center";
+    if (mode === "playing" && s.sim.state === "ready") {
       g2d.fillStyle = "rgba(255,255,255,0.75)";
       g2d.font = "bold 16px system-ui, sans-serif";
-      g2d.textAlign = "center";
       g2d.fillText("TAP OR SPACE", W / 2, H / 2 - 32);
+      const line = run?.chase ? `BEAT THE GHOST: ${run.chase.score}` : run?.royale ? `ROYALE: ${ROYALE_BOTS + 1} BIRDS` : null;
+      if (line) {
+        g2d.fillStyle = "#f5c518";
+        g2d.font = "bold 13px system-ui, sans-serif";
+        g2d.fillText(line, W / 2, H / 2 - 54);
+      }
     } else if (s.sim.state === "play") {
       g2d.fillStyle = "rgba(255,255,255,0.22)";
       g2d.font = "bold 56px system-ui, sans-serif";
-      g2d.textAlign = "center";
-      g2d.fillText(String(s.sim.score), W / 2, H / 2 + 20);
+      g2d.fillText(String(s.sim.score), W / 2, 64);
+    }
+
+    if (mode === "playing" && s.sim.state === "play") {
+      g2d.font = "bold 12px system-ui, sans-serif";
+      if (s.ghost) {
+        const beaten = s.beatenAt !== null;
+        g2d.fillStyle = beaten ? "#f5c518" : "rgba(158,200,255,0.9)";
+        g2d.fillText(beaten ? "GHOST BEATEN" : `GHOST ${s.ghost.score}`, W / 2, 84);
+      }
+      if (s.royale) {
+        g2d.textAlign = "right";
+        g2d.fillStyle = "#ffffff";
+        g2d.fillText(`${s.royale.alive() + 1} / ${ROYALE_BOTS + 1}`, W - 10, 22);
+        g2d.textAlign = "left";
+        g2d.fillStyle = "rgba(255,255,255,0.7)";
+        g2d.font = "11px system-ui, sans-serif";
+        s.royale.recentFeed().forEach((f, i) => g2d.fillText(`${f.name} out at ${f.score}`, 10, 22 + i * 15));
+        if (s.royale.winAt !== null) {
+          g2d.textAlign = "center";
+          g2d.fillStyle = "#f5c518";
+          g2d.font = "bold 18px system-ui, sans-serif";
+          g2d.fillText("LAST BIRD FLYING", W / 2, 100);
+        }
+      }
     }
 
     texture.needsUpdate = true;
@@ -735,19 +842,27 @@ function Button({ position, color }) {
   );
 }
 
-function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath, showSign = true }) {
+function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath, runRef, showSign = true }) {
   const group = useRef(null);
   const screenGlow = useRef(null);
   const [hovered, setHovered] = useState(false);
   const [hasPlayed, setHasPlayed] = useState(false);
 
   function startGame(e) {
-    e.stopPropagation();
+    e?.stopPropagation?.();
     if (mode !== "idle") return;
     setHasPlayed(true);
     ctx();
     setMode("playing");
   }
+
+  // The hero's "cabinet runs Flappy" link starts the same game.
+  useEffect(() => {
+    const onPlay = () => startGame();
+    window.addEventListener("play-flappy", onPlay);
+    return () => window.removeEventListener("play-flappy", onPlay);
+    /* eslint-disable-next-line */
+  }, [mode]);
 
   useFrame(() => {
     if (!group.current) return;
@@ -812,7 +927,7 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath, showS
         </Html>
       )}
       <Suspense fallback={null}>
-        <GoliathCabinet mode={mode} flapRef={flapRef} onScore={onScore} onDeath={onDeath} />
+        <GoliathCabinet mode={mode} flapRef={flapRef} onScore={onScore} onDeath={onDeath} runRef={runRef} />
       </Suspense>
       <pointLight position={[0, 1.86, 0.44]} color="#ffd18b" intensity={glow ? 0.4 : 0.2} distance={1.2} />
       <pointLight ref={screenGlow} position={[0, 1.3, 0.55]} color="#6b9bff" intensity={hovered ? 0.45 : 0.2} distance={2} />
@@ -824,9 +939,9 @@ function Console({ reduceMotion, mode, setMode, flapRef, onScore, onDeath, showS
 // CanvasTexture into its "screen" material. Decoder self-hosted in /draco.
 const GOLIATH_URL = `${import.meta.env.BASE_URL}models/goliath.glb`;
 const DRACO_PATH = `${import.meta.env.BASE_URL}draco/`;
-function GoliathCabinet({ mode, flapRef, onScore, onDeath }) {
+function GoliathCabinet({ mode, flapRef, onScore, onDeath, runRef }) {
   const { scene } = useGLTF(GOLIATH_URL, DRACO_PATH);
-  const tex = useFlappyTexture(mode, flapRef, onScore, onDeath);
+  const tex = useFlappyTexture(mode, flapRef, onScore, onDeath, runRef);
 
   // Clone once so material edits don't leak into drei's cache
   const cab = useMemo(() => {
@@ -1768,6 +1883,28 @@ function addScore(name, score) {
   return list;
 }
 
+const BEST_RUN_KEY = "flappy.bestRun";
+function readBestRun() {
+  try {
+    const run = JSON.parse(localStorage.getItem(BEST_RUN_KEY));
+    return run && { ...run, seed: BigInt(run.seed) };
+  } catch { return null; }
+}
+function writeBestRun(run) {
+  try { localStorage.setItem(BEST_RUN_KEY, JSON.stringify({ seed: run.seed.toString(), flaps: run.flaps, score: run.score })); } catch {}
+}
+const TODAY_KEY = "flappy.today";
+const dayIndex = () => Math.floor(Date.now() / 86400000);
+function readToday() {
+  try {
+    const t = JSON.parse(localStorage.getItem(TODAY_KEY));
+    return t?.day === dayIndex() ? t.score : 0;
+  } catch { return 0; }
+}
+function writeToday(score) {
+  try { localStorage.setItem(TODAY_KEY, JSON.stringify({ day: dayIndex(), score })); } catch {}
+}
+
 export default function ConsoleScene() {
   const reduceMotion = useReducedMotion();
   const [mode, setMode] = useState("idle");
@@ -1814,6 +1951,25 @@ export default function ConsoleScene() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const flapRef = useRef(false);
+  // What the next run should be, and how the last one went. Read by the screen hook.
+  const runRef = useRef(null);
+  if (runRef.current === null) {
+    const params = new URLSearchParams(window.location.search);
+    runRef.current = {
+      chase: decodeRun(/^#chase=(.+)$/.exec(window.location.hash)?.[1]),
+      royale: params.has("royale"),
+      reviving: false,
+      lastRun: null,
+      placement: null,
+      beatGhost: false,
+    };
+  }
+  const deadAt = useRef(0);
+  const [bestRun, setBestRun] = useState(readBestRun);
+  const [today, setToday] = useState(readToday);
+  const [linkCopied, setLinkCopied] = useState(false);
+  // What the game-over panel shows, copied out of runRef when a run ends.
+  const [over, setOver] = useState({});
 
   function flap() { flapRef.current = true; }
   function savePlayerName(n) {
@@ -1825,6 +1981,25 @@ export default function ConsoleScene() {
     setLastRun(finalScore);
     setMode("dead");
     setSubmitted(false);
+    setLinkCopied(false);
+    deadAt.current = performance.now();
+    const run = runRef.current;
+    const last = run.lastRun;
+    setOver({
+      revived: !!last?.revived,
+      chasing: !!run.chase,
+      royale: run.royale,
+      placement: run.placement,
+      beatGhost: run.beatGhost,
+    });
+    if (last && !last.revived && finalScore > (bestRun?.score ?? 0)) {
+      setBestRun(last);
+      writeBestRun(last);
+    }
+    if (finalScore > today) {
+      setToday(finalScore);
+      writeToday(finalScore);
+    }
     if (finalScore > best) {
       setBest(finalScore);
       try { localStorage.setItem("flappy.best", String(finalScore)); } catch {}
@@ -1837,16 +2012,47 @@ export default function ConsoleScene() {
     setSubmitted(true);
   }
   function replay() { setMode("playing"); }
+  function revive() {
+    runRef.current.reviving = true;
+    setMode("playing");
+  }
+  function chaseBest() {
+    runRef.current.chase = bestRun;
+    runRef.current.royale = false;
+    replay();
+  }
+  function stopChase() {
+    runRef.current.chase = null;
+    replay();
+  }
+  function toggleRoyale() {
+    runRef.current.royale = !runRef.current.royale;
+    runRef.current.chase = null;
+    setOver((o) => ({ ...o, royale: runRef.current.royale, chasing: false }));
+    if (runRef.current.royale) replay();
+  }
+  async function copyChallenge() {
+    const code = runRef.current.lastRun && encodeRun(runRef.current.lastRun);
+    if (!code) return;
+    const url = `${window.location.origin}${window.location.pathname}#chase=${code}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+    } catch {
+      window.prompt("Copy this challenge link", url);
+    }
+  }
 
   // Keyboard
   useEffect(() => {
     const onKey = (e) => {
+      if (e.target?.matches?.("input, textarea") && e.code !== "Escape") return;
       if (mode === "playing") {
         if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); flap(); }
         if (e.code === "Escape") setMode("idle");
         if (e.code === "KeyM") { const n = !isMuted; setIsMuted(n); setMuted(n); }
       } else if (mode === "dead") {
-        if (e.code === "Space") replay();
+        if ((e.code === "Space" || e.code === "Enter") && !e.target?.matches?.("button, a") && performance.now() - deadAt.current > 500) replay();
         if (e.code === "Escape") setMode("idle");
       }
     };
@@ -2000,6 +2206,7 @@ export default function ConsoleScene() {
               flapRef={flapRef}
               onScore={setScore}
               onDeath={onDeath}
+              runRef={runRef}
               showSign={introDone}
             />
             <ContactShadows
@@ -2092,7 +2299,7 @@ export default function ConsoleScene() {
               style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
             >
               <div
-                className="w-full max-w-sm p-6 sm:p-8 rounded-2xl"
+                className="w-full max-w-sm max-h-[calc(100dvh-3rem)] overflow-y-auto p-6 sm:p-8 rounded-2xl"
                 style={{
                   background: "#0a0d14",
                   border: "1px solid rgba(255,255,255,0.1)",
@@ -2103,7 +2310,7 @@ export default function ConsoleScene() {
                 <p id="flappy-over-title" className="text-[10px] tracking-[0.2em] uppercase text-[#ff2e2e] mb-1">
                   GAME OVER
                 </p>
-                <div className="flex items-end gap-6 mb-6">
+                <div className="flex items-end gap-6 mb-3">
                   <div>
                     <div className="text-[10px] tracking-[0.2em] uppercase text-[#86868b]">SCORE</div>
                     <div className="text-4xl font-bold tabular-nums text-white">{lastRun}</div>
@@ -2117,6 +2324,37 @@ export default function ConsoleScene() {
                       <div className="text-[10px] tracking-[0.2em] uppercase text-[#86868b]">MEDAL</div>
                       <div className="text-base font-bold mb-1 text-[#f5c518]">{medalFor(lastRun ?? 0)}</div>
                     </div>
+                  )}
+                </div>
+
+                <p className="text-[10px] tracking-[0.15em] uppercase text-[#86868b] mb-3">
+                  TODAY — {today}
+                  {over.placement != null && ` · #${over.placement} OF ${ROYALE_BOTS + 1}`}
+                  {over.beatGhost && " · GHOST BEATEN"}
+                </p>
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {!over.revived && !over.chasing && !over.royale && (
+                    <button onClick={revive} className="min-h-11 px-3 text-[11px] tracking-[0.05em] rounded-md text-[#030304] transition-colors bg-[#f5c518] hover:bg-[#ffd84d]">
+                      REVIVE
+                    </button>
+                  )}
+                  {bestRun && !over.chasing && (
+                    <button onClick={chaseBest} className="min-h-11 px-3 text-[11px] tracking-[0.05em] rounded-md text-white border border-white/30 hover:border-white transition-colors">
+                      CHASE BEST {bestRun.score}
+                    </button>
+                  )}
+                  {over.chasing && (
+                    <button onClick={stopChase} className="min-h-11 px-3 text-[11px] tracking-[0.05em] rounded-md text-white border border-white/30 hover:border-white transition-colors">
+                      STOP CHASE
+                    </button>
+                  )}
+                  <button onClick={toggleRoyale} className="min-h-11 px-3 text-[11px] tracking-[0.05em] rounded-md text-white border border-white/30 hover:border-white transition-colors">
+                    {over.royale ? "CLASSIC MODE" : "ROYALE"}
+                  </button>
+                  {lastRun >= 1 && !over.revived && (
+                    <button onClick={copyChallenge} className="min-h-11 px-3 text-[11px] tracking-[0.05em] rounded-md text-white border border-white/30 hover:border-white transition-colors">
+                      {linkCopied ? "LINK COPIED" : "COPY CHALLENGE"}
+                    </button>
                   )}
                 </div>
 
