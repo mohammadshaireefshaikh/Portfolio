@@ -1426,94 +1426,6 @@ function HotWheelsShelf({ wallX, y = 1.3, shelfLen = 5.4, rows = 3, perRow = 11 
   );
 }
 
-// 5-panel multi-piece wall art (step layout). Loads a single image,
-// rotates it 90° onto an off-screen canvas so a portrait source reads
-// as landscape across the panels, then slices that landscape image
-// into 5 vertical strips (classic multi-piece canvas format).
-function MultiPanelWallArt({ x = 0, y = 1.6, texturePath = "/img/zoro-wallart.jpg" }) {
-  const [rotated, setRotated] = useState(null);
-
-  // Draw the source image rotated −90° into a canvas, then wrap it as a
-  // Three.js CanvasTexture. This way the source can stay portrait on
-  // disk but display as landscape across the panels.
-  useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.height;   // swap dims → landscape
-      canvas.height = img.width;
-      const g = canvas.getContext("2d");
-      g.translate(canvas.width / 2, canvas.height / 2);
-      g.rotate(-Math.PI / 2);
-      g.drawImage(img, -img.width / 2, -img.height / 2);
-      const t = new THREE.CanvasTexture(canvas);
-      t.colorSpace = THREE.SRGBColorSpace;
-      t.minFilter = THREE.LinearFilter;
-      t.magFilter = THREE.LinearFilter;
-      t.needsUpdate = true;
-      setRotated(t);
-    };
-    img.src = `${import.meta.env.BASE_URL}${texturePath.replace(/^\//, "")}`;
-  }, [texturePath]);
-
-  const panelCount = 5;
-  const panelWidth = 0.42;
-  const gap = 0.05;
-  const stepHeights = [0.75, 1.1, 1.4, 1.1, 0.75]; // short → tall → short
-
-  // One cloned slice per panel from the rotated (landscape) canvas
-  const slices = useMemo(() => {
-    if (!rotated) return [];
-    const arr = [];
-    for (let i = 0; i < panelCount; i++) {
-      const t = rotated.clone();
-      t.image = rotated.image;
-      t.wrapS = THREE.ClampToEdgeWrapping;
-      t.wrapT = THREE.ClampToEdgeWrapping;
-      t.repeat.set(1 / panelCount, 1);
-      t.offset.set(i / panelCount, 0);
-      t.colorSpace = THREE.SRGBColorSpace;
-      t.needsUpdate = true;
-      arr.push(t);
-    }
-    return arr;
-  }, [rotated]);
-
-  return (
-    <group position={[x, y, -ROOM.depth / 2 + ROOM.wallT + 0.04]}>
-      {stepHeights.map((h, i) => {
-        const panelX = (i - (panelCount - 1) / 2) * (panelWidth + gap);
-        return (
-          <group key={i} position={[panelX, 0, 0]}>
-            {/* Thin dark frame */}
-            <mesh castShadow>
-              <boxGeometry args={[panelWidth, h, 0.03]} />
-              <meshStandardMaterial color="#0a0a0e" roughness={0.6} />
-            </mesh>
-            {/* Image slice — only mounts once the canvas is ready */}
-            {slices[i] && (
-              <mesh position={[0, 0, 0.019]}>
-                <planeGeometry args={[panelWidth * 0.96, h * 0.96]} />
-                <meshStandardMaterial
-                  map={slices[i]}
-                  emissive="#ffffff"
-                  emissiveMap={slices[i]}
-                  emissiveIntensity={0.18}
-                  roughness={0.9}
-                  toneMapped={false}
-                />
-              </mesh>
-            )}
-          </group>
-        );
-      })}
-      {/* Picture spotlight */}
-      <pointLight position={[0, 1.3, 0.8]} color="#ffcf90" intensity={0.75} distance={4.5} decay={2} />
-    </group>
-  );
-}
-
 // ─── Media wall: flat LED TV + black-glass table + PS5 + cable ─────
 function TVWall({ x, wallZ, floorY }) {
   const tvW = 1.7, tvH = 0.96, tvY = floorY + 1.55;
@@ -1758,10 +1670,6 @@ function RoomShell() {
       <CatHouse position={[-0.55, floorY, backZ + 0.45]} rotation={[0, 0.15, 0]} />
       <SleepingCat position={[-0.55, floorY + 0.02, backZ + 0.45]} rotation={[0, 0.9, 0]} />
       {/* Arcade cabinet is mounted at Canvas root at CAB_POS (needs pointer events) */}
-      {/* Big One Piece 5-panel wall art — right of the arcade */}
-      <Suspense fallback={null}>
-        <MultiPanelWallArt x={3.3} y={floorY + 1.62} />
-      </Suspense>
 
       {/* ─── LEFT WALL: Hot Wheels collection shelf ─── */}
       <HotWheelsShelf wallX={-hw + wallT + 0.02} y={1.05} />
